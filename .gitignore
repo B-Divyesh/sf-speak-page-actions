@@ -1,5 +1,9 @@
 node_modules/
 dist/
+.output/
+.wxt/
+test-results/
+.factory/evidence/
 .env
 *.log
 graphify-out/

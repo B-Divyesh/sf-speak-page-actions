@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f7f0df" />
+    <title>Speak Page Actions</title>
+  </head>
+  <body>
+    <main id="app" aria-describedby="status">
+      <a class="skip" href="#actions">Skip to actions</a>
+      <header><span class="mark" aria-hidden="true">●</span><strong>Speak Page Actions</strong><button id="scan" class="text-button">Scan page</button></header>
+      <section class="listen" aria-labelledby="listen-title">
+        <p class="eyebrow">Page-scoped voice control</p>
+        <h1 id="listen-title">Say a visible action</h1>
+        <p class="hint">Hold to speak. Try “click save changes”.</p>
+        <button id="talk" class="talk" type="button" aria-label="Hold to speak" aria-pressed="false"><span aria-hidden="true">●</span> Hold to speak</button>
+        <label class="command-label" for="command">Or type the command</label>
+        <div class="command-row"><input id="command" autocomplete="off" placeholder="click publish" /><button id="run" type="button">Run command</button></div>
+      </section>
+      <p id="status" role="status" aria-live="polite">Scanning visible actions…</p>
+      <section id="actions" aria-labelledby="actions-title">
+        <div class="section-title"><h2 id="actions-title">Visible actions</h2><span id="count">0</span></div>
+        <p id="empty" class="empty" hidden>No labelled actions were found. Open a normal web page, then scan again.</p>
+        <ul id="action-list"></ul>
+      </section>
+      <button id="undo" class="undo" type="button" hidden>Undo last page action</button>
+      <details class="pro"><summary>Pro command aliases</summary><p>Save a short word for a visible action. The alias stays in this browser.</p><label for="alias-name">Alias</label><input id="alias-name" autocomplete="off" placeholder="checkout" /><label for="alias-target">Visible action</label><select id="alias-target"></select><label for="license-token">Pro license token</label><input id="license-token" autocomplete="off" /><button id="save-alias" type="button">Save alias</button><p id="alias-status" role="status" aria-live="polite"></p></details>
+      <dialog id="review" aria-labelledby="review-title">
+        <p class="eyebrow">Review before action</p>
+        <h2 id="review-title">Use this action?</h2>
+        <p id="review-copy"></p>
+        <div class="dialog-buttons"><button id="cancel" type="button" class="quiet">Cancel</button><button id="confirm" type="button" class="danger">Use action</button></div>
+      </dialog>
+      <footer>Push-to-talk only. Password fields are never listed.</footer>
+    </main>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

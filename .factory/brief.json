@@ -1,0 +1,9 @@
+{
+  "slug": "speak-page-actions",
+  "title": "Speak Page Actions",
+  "territory": "utilities",
+  "user": "People with limited vision or hand mobility who need to operate ordinary browser pages by speaking a small, reviewable set of visible actions.",
+  "smallest_useful_product": "A Chromium extension that enumerates visible, labelled buttons/links/form fields, supports offline grammar for click label, then shows a confirmation for destructive actions.",
+  "constraints": "Local speech recognition where browser or OS permits; push-to-talk only; never read masked fields; confirmation and undo for submits or deletes; respect site CSP and permissions.",
+  "monetization": "one-time"
+}

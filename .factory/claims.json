@@ -1,0 +1,23 @@
+[
+  {
+    "id": "sample-action",
+    "claim": "Opens a safe sample page in one click",
+    "where": "landing hero",
+    "test": "npm test -- --grep @claim:sample-action",
+    "sandbox": "fresh browser context; click Try it with sample data; assert demo banner and sample actions"
+  },
+  {
+    "id": "demo-local",
+    "claim": "Demo — sample data, nothing is saved",
+    "where": "demo banner",
+    "test": "npm test -- --grep @claim:demo-local",
+    "sandbox": "fresh browser context; intercept all requests during demo command; assert same-origin only and demo storage key"
+  },
+  {
+    "id": "offline-reload",
+    "claim": "Works offline after the first visit",
+    "where": "README",
+    "test": "npm test -- --grep @claim:offline-reload",
+    "sandbox": "fresh browser context; visit demo, wait for service worker, set context offline, reload demo"
+  }
+]

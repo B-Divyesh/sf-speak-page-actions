@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://speak-page-actions.sociobot.in/sitemap.xml

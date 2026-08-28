@@ -1,0 +1,48 @@
+import './style.css';
+import './pro.css';
+import { findAction, normaliseWords, type PageAction } from '../../lib/actions';
+
+type SpeechRecognitionLike = { start(): void; stop(): void; lang: string; interimResults: boolean; continuous: boolean; onresult: ((event: any) => void) | null; onerror: ((event: any) => void) | null; onend: (() => void) | null; };
+const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+const talk = $('talk') as HTMLButtonElement, command = $('command') as HTMLInputElement, status = $('status'), list = $('action-list'), empty = $('empty'), count = $('count'), review = $('review') as HTMLDialogElement, reviewCopy = $('review-copy'), undo = $('undo') as HTMLButtonElement, aliasTarget = $('alias-target') as HTMLSelectElement, aliasName = $('alias-name') as HTMLInputElement, licenseToken = $('license-token') as HTMLInputElement, aliasStatus = $('alias-status');
+let actions: PageAction[] = [], pending: PageAction | undefined, recognition: SpeechRecognitionLike | undefined;
+
+async function activeTab() { const [tab] = await browser.tabs.query({ active: true, currentWindow: true }); if (!tab.id) throw new Error('No active page was found.'); return tab.id; }
+async function pageMessage(message: object) { return browser.tabs.sendMessage(await activeTab(), message); }
+function setStatus(message: string) { status.textContent = message; }
+function render() {
+  count.textContent = String(actions.length); list.innerHTML = ''; empty.hidden = actions.length > 0;
+  aliasTarget.innerHTML = actions.map((action) => `<option value="${escapeHtml(action.label)}">${escapeHtml(action.label)}</option>`).join('');
+  for (const action of actions) { const li = document.createElement('li'), button = document.createElement('button'); button.className = 'action'; button.type = 'button'; button.innerHTML = `<span>${escapeHtml(action.label)} ${action.destructive ? '<span class="risk">review</span>' : ''}</span><span class="kind">${action.kind}</span>`; button.addEventListener('click', () => use(action)); li.append(button); list.append(li); }
+}
+function escapeHtml(value: string) { const node = document.createElement('span'); node.textContent = value; return node.innerHTML; }
+async function scan() { setStatus('Scanning visible actions…'); try { const result = await pageMessage({ type: 'SPA_COLLECT' }); actions = result.actions; render(); setStatus(actions.length ? `${actions.length} visible actions on ${result.title || 'this page'}.` : 'No labelled actions were found.'); } catch { actions=[]; render(); setStatus('This page cannot be scanned. Open a normal web page and try again.'); } }
+async function activate(action: PageAction) { try { const result = await pageMessage({ type: 'SPA_ACTIVATE', id: action.id }); setStatus(result.message); undo.hidden = !result.canUndo; if (result.ok) await scan(); } catch { setStatus('The page changed before that action could run. Scan the page again.'); } }
+function use(action: PageAction) { if (action.destructive) { pending = action; reviewCopy.textContent = `“${action.label}” may change or send something on this page.`; review.showModal(); } else activate(action); }
+async function runCommand() { const aliases = (await browser.storage.local.get('spa:aliases'))['spa:aliases'] as Record<string, string> | undefined; const savedTarget = aliases?.[normaliseWords(command.value)]; const action = savedTarget ? findAction(savedTarget, actions) : findAction(command.value, actions); if (!action) { setStatus('No visible action matched those words. Say or type the label shown below.'); return; } use(action); }
+async function licenseIsActive(token: string) {
+  const saved = await browser.storage.local.get('spa:license-verdict'); const cached = saved['spa:license-verdict'] as { valid?: boolean; checkedAt?: number } | undefined;
+  if (cached?.valid && cached.checkedAt && Date.now() - cached.checkedAt < 86_400_000) return true;
+  const response = await fetch(`https://api.sociobot.in/api/v1/products/speak-page-actions/verify?license=${encodeURIComponent(token)}`);
+  const verdict = await response.json() as { valid: boolean }; await browser.storage.local.set({ 'spa:license-verdict': { ...verdict, checkedAt: Date.now() } }); return verdict.valid;
+}
+async function saveAlias() {
+  const alias = normaliseWords(aliasName.value), target = aliasTarget.value, token = licenseToken.value.trim();
+  if (!alias || !target || !token) { aliasStatus.textContent = 'Enter an alias, choose an action, and paste your pro license token.'; return; }
+  aliasStatus.textContent = 'Checking license…';
+  try { if (!await licenseIsActive(token)) { aliasStatus.textContent = 'This license is not active. You can buy or restore a license on the product site.'; return; } const current = (await browser.storage.local.get('spa:aliases'))['spa:aliases'] as Record<string, string> | undefined; await browser.storage.local.set({ 'spa:aliases': { ...current, [alias]: target }, 'sb_license:speak-page-actions': token }); aliasStatus.textContent = `Saved “${alias}” for ${target}.`; } catch { aliasStatus.textContent = 'The license could not be checked. Connect to the internet and try again.'; }
+}
+function makeRecognition() {
+  const Constructor = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+  if (!Constructor) { setStatus('Speech recognition is unavailable here. Type the command instead.'); return; }
+  recognition = new Constructor(); recognition.lang = navigator.language || 'en-US'; recognition.interimResults = false; recognition.continuous = false;
+  recognition.onresult = (event) => { command.value = event.results[event.results.length - 1][0].transcript; setStatus(`Heard “${command.value}”.`); runCommand(); };
+  recognition.onerror = (event) => { setStatus(event.error === 'not-allowed' ? 'Microphone access was denied. Allow it, or type the command.' : 'Speech was not available. Type the command instead.'); };
+  recognition.onend = () => { talk.setAttribute('aria-pressed', 'false'); talk.textContent = '● Hold to speak'; };
+}
+function startListening() { if (!recognition) makeRecognition(); if (!recognition) return; try { talk.setAttribute('aria-pressed', 'true'); talk.textContent = '● Listening… release to stop'; setStatus('Listening. Release when you finish the action label.'); recognition.start(); } catch { /* recognition already started */ } }
+function stopListening() { recognition?.stop(); }
+$('scan').addEventListener('click', scan); $('run').addEventListener('click', runCommand); command.addEventListener('keydown', (e) => { if (e.key === 'Enter') runCommand(); });
+talk.addEventListener('pointerdown', startListening); talk.addEventListener('pointerup', stopListening); talk.addEventListener('pointerleave', stopListening); talk.addEventListener('keydown', (e) => { if (e.key === ' ') { e.preventDefault(); startListening(); }}); talk.addEventListener('keyup', (e) => { if (e.key === ' ') stopListening(); });
+$('cancel').addEventListener('click', () => review.close()); $('confirm').addEventListener('click', () => { review.close(); if (pending) activate(pending); pending = undefined; }); undo.addEventListener('click', async () => { const result = await pageMessage({ type: 'SPA_UNDO' }); setStatus(result.message); undo.hidden = true; await scan(); }); $('save-alias').addEventListener('click', saveAlias);
+scan();
