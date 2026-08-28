@@ -24,7 +24,7 @@ Verification completed on 2026-08-28:
 - `npm test` passed: 4 tests. Claims cover one-click sample entry, local demo storage/same-origin activity, and offline reload after first visit.
 - `/opt/fleet/lib/verify-url.sh` against the local built site passed: title, `lang=en`, one h1, main landmark, image alt text, labelled buttons, and no console errors. Local page load measured 551 ms.
 - Axe Playwright check at 390×844 reported no serious or critical violations.
-- Built site payload: 11.70 KB JS (4.54 KB gzip), 8.75 KB CSS (2.69 KB gzip), 142 KB hero WebP, 116 KB social WebP.
+- Built site payload: 11.66 KB JS (4.53 KB gzip), 8.75 KB CSS (2.69 KB gzip), 142 KB hero WebP, 116 KB social WebP.
 
 ## Known gaps
 
