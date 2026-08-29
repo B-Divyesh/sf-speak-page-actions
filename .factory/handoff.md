@@ -1,4 +1,39 @@
-# Speak Page Actions — verification 7 handoff
+# Speak Page Actions — review 4 handoff
+
+## Current status — supersedes the historical verification below
+
+**FAIL** for candidate `e372ed1c7246f0b45fc79811c00fb9d6180d54bb` at
+<https://speak-page-actions.sociobot.in>. This review made no product-code
+changes.
+
+One blocking defect remains: **Cancel subscription**, **Unsubscribe**,
+**Archive conversation**, and **Deactivate account** are not classified as
+sensitive, so they can run without the promised review. See `.factory/review-4.md`
+F-4-1 for the evidence and repair/test requirement.
+
+Fresh 390×844 and desktop cold reads, live isolated demo, same-origin request
+log, routes, metadata, headers, 404, package, and mobile Axe checks passed.
+Every one of the 18 exact claim commands passed independently in clean clone
+`/tmp/speak-page-actions-review-4.C1zGhO`; `CI=1 npm test` (5 Vitest + 32
+Playwright), lint, build, package check, and audit also passed.
+
+Run:
+
+```sh
+npm ci
+npm test
+npm run lint
+npm run build
+npm run test:package
+```
+
+Next step: repair F-4-1 with one conservative sensitive-action policy at
+collection and activation, then extend `@claim:destructive-review` to prove
+common irreversible controls cannot act until confirmation.
+
+---
+
+## Historical verification 7 handoff
 
 ## Status
 
