@@ -1,4 +1,4 @@
-# Copy audit — polish 4
+# Copy audit — polish 5
 
 Count rule: whitespace-delimited tokens. Punctuation, hyphenated forms, URLs,
 paths, and `$12` count as one word. This audit covers rendered sentences,
@@ -172,7 +172,7 @@ README string to appear in this file.
 | Review before action | 3 | dialog kicker |
 | Use this action? | 3 | dialog h2 |
 | Cancel | 1 | button |
-| Use action | 2 | button |
+| Confirm action | 2 | default confirmation button label |
 | Push-to-talk only. | 2 | popup footer |
 | Password fields are never listed. | 5 | popup footer, `password-exclusion` |
 | The extension reads visible labels, roles, and control types on the current page after you open it. | 17 | privacy |

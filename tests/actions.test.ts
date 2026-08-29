@@ -9,6 +9,10 @@ describe('spoken command matching', () => {
   it('matches a visible label without a numbered overlay', () => expect(findAction('click save address', actions)?.id).toBe('a'));
   it('normalises speech punctuation', () => expect(commandTarget('Click, Save address!')).toBe('save address'));
   it('marks risky page labels for review', () => expect(isDestructive('Delete saved draft')).toBe(true));
+  it.each(['Cancel subscription', 'Unsubscribe', 'Archive conversation', 'Deactivate account', 'Close your account', 'Sign out'])(
+    'marks account-ending action “%s” for review',
+    (label) => expect(isDestructive(label)).toBe(true),
+  );
   it('marks a destructive label when inline page text runs together', () => expect(isDestructive('BUTTONDelete saved draft review')).toBe(true));
   it('keeps words stable', () => expect(normaliseWords('Review  order')).toBe('review order'));
 });

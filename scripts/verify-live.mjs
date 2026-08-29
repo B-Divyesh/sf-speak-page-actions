@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import AxeBuilder from '@axe-core/playwright';
 import { chromium } from '@playwright/test';
+import { zipContentManifest } from './zip-content-manifest.mjs';
 
 const base = (process.env.BASE_URL || 'https://speak-page-actions.sociobot.in').replace(/\/$/, '');
 const evidence = process.env.EVIDENCE_DIR || 'test-results/verify-live-3';
@@ -85,9 +87,11 @@ await page.evaluate(() => window.scrollTo(0, 1200));
 const priorScroll = await page.evaluate(() => window.scrollY);
 await page.locator('footer').getByRole('link', { name: 'Privacy' }).click();
 await page.goBack();
+await page.waitForFunction(() => document.activeElement?.textContent?.trim() === 'Speak the action you need');
 assert.equal(await page.getByRole('heading', { level: 1, name: 'Speak the action you need' }).evaluate((node) => node === document.activeElement), true);
 assert.ok(await page.evaluate(() => window.scrollY) >= priorScroll - 2);
 await page.goForward();
+await page.waitForFunction(() => document.activeElement?.textContent?.trim() === 'Privacy for your current page');
 assert.equal(await page.getByRole('heading', { level: 1, name: 'Privacy for your current page' }).evaluate((node) => node === document.activeElement), true);
 report.history = { priorScroll, restored: true, focusRestored: true };
 
@@ -166,9 +170,19 @@ for (const match of homeHtml.matchAll(/(?:src|href)="(\/assets\/[^"]+)"/g)) {
   assert.equal(createHash('sha256').update(live).digest('hex'), createHash('sha256').update(local).digest('hex'));
 }
 const liveZip = Buffer.from(await (await fetch(`${base}/downloads/speak-page-actions.zip`)).arrayBuffer());
-const localZip = readFileSync('dist/site/downloads/speak-page-actions.zip');
-assert.equal(createHash('sha256').update(liveZip).digest('hex'), createHash('sha256').update(localZip).digest('hex'));
-report.assets = { liveBuildMatchesLocal: true, downloadMatchesLocal: true, cspFrameAncestors: true, referrerPolicy: 'no-referrer' };
+const archiveDirectory = mkdtempSync(join(tmpdir(), 'speak-page-actions-live-zip-'));
+let extensionMembers;
+try {
+  const liveZipPath = join(archiveDirectory, 'live.zip');
+  writeFileSync(liveZipPath, liveZip);
+  const liveManifest = zipContentManifest(liveZipPath);
+  const localManifest = zipContentManifest('dist/site/downloads/speak-page-actions.zip');
+  assert.deepEqual(liveManifest, localManifest, 'The deployed extension ZIP member names and contents must match the local build.');
+  extensionMembers = liveManifest.length;
+} finally {
+  rmSync(archiveDirectory, { recursive: true, force: true });
+}
+report.assets = { liveBuildMatchesLocal: true, downloadContentsMatchLocal: true, extensionMembers, cspFrameAncestors: true, referrerPolicy: 'no-referrer' };
 
 assert.deepEqual(report.errors, []);
 writeFileSync(join(evidence, 'cold-check.json'), `${JSON.stringify(report, null, 2)}\n`);

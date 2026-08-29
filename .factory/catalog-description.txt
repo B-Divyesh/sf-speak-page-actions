@@ -1,1 +1,1 @@
-Review visible browser controls by voice or typing before sensitive actions.
+Speak or type a visible browser control, with review before sensitive actions.

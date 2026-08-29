@@ -230,9 +230,13 @@ test('@claim:destructive-review requires review before every documented sensitiv
       await popup.getByRole('button', { name: new RegExp(label) }).click();
       await expect(popup.getByRole('dialog')).toBeVisible();
       await expect(fixture.locator('#result')).toHaveText('');
-      await popup.getByRole('button', { name: 'Use action' }).click();
+      const confirm = popup.locator('#confirm');
+      await expect(confirm).toHaveText(label);
+      if (label === 'Publish changes') await popup.screenshot({ path: 'test-results/polish-5/extension-confirmation.png', fullPage: true });
+      await confirm.click();
       await expect(fixture.locator('#result')).toHaveText(expected);
       await expect(popup.getByRole('dialog')).toBeHidden();
+      await expect(confirm).toHaveText('Confirm action');
     }
   } finally { await context.close(); }
 });
@@ -316,6 +320,7 @@ test('@claim:core-free runs normal controls and reaches review through the packa
     await expect(fixture.locator('#result')).toHaveText('Saved address.');
     await popup.getByRole('button', { name: /Delete saved draft/ }).click();
     await expect(popup.getByRole('dialog')).toBeVisible();
+    await expect(popup.locator('#confirm')).toHaveText('Delete saved draft');
     await expect(popup.getByRole('dialog')).toContainText('may change or send something');
     expect(await popup.evaluate(() => chrome.storage.local.get(['spa:aliases', 'sb_license:speak-page-actions', 'spa:license-verdict']))).toEqual({});
   } finally { await context.close(); }
@@ -331,7 +336,7 @@ test('@claim:page-data-local records no external page-data requests in a complet
     await popup.getByRole('button', { name: 'Run command' }).click();
     await expect(fixture.locator('#result')).toHaveText('Saved address.');
     await popup.getByRole('button', { name: /Delete saved draft/ }).click();
-    await popup.getByRole('button', { name: 'Use action' }).click();
+    await popup.getByRole('button', { name: 'Delete saved draft', exact: true }).last().click();
     await expect(fixture.locator('#result')).toHaveText('Deleted saved draft.');
     await popup.getByRole('button', { name: 'Undo last page action' }).click();
     await expect(fixture.locator('#draft')).toHaveCount(1);

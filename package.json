@@ -13,6 +13,7 @@
     "test:unit": "vitest run tests/actions.test.ts",
     "test:copy": "node scripts/check-copy-audit.mjs",
     "test:registry": "node scripts/check-claims.mjs",
+    "test:zip-contents": "node scripts/check-zip-content-comparison.mjs",
     "test:claims": "playwright test",
     "typecheck": "npx tsc --noEmit",
     "lint": "npm run typecheck",
