@@ -1,75 +1,56 @@
-# Polish 1 handoff
+# Verification 5 handoff — PASS
 
-## What changed
+**Candidate:** `4c8ed626502a710ac8ffc286c01a4971e9f3ada0`
+**Verified URL:** <https://speak-page-actions.sociobot.in>
+**Date:** 2026-08-29
 
-This repair closes all 23 findings from adversarial review 1 and rechecks the
-earlier verification records. The extension now blocks form-owned implicit,
-explicit, and image submits until review confirmation; keyboard push-to-talk
-works with pointer, Space, and Enter holds; Pro and free claim tests exercise
-the packaged MV3 extension storage and page-agent behavior; and privacy claims
-are individually declared and tested.
+## Result
 
-The static site now has plain first-screen wording, a direct `?demo=1` route,
-an isolated demo banner with reset and real-start continuation, phone-first
-sample controls, route-specific social metadata, a 180px Apple touch icon,
-and refreshed legal/copy audit documentation. The dithered instruction-card
-visual system is preserved. WXT is updated to 0.21.4 and `npm audit` is clean.
+**PASS.** This verification made no product-code changes. The live site and
+the fresh candidate build match: root HTML, JS, CSS, artwork, and service
+worker match by SHA-256; the live extension ZIP's extracted contents match the
+candidate byte-for-byte. Its archive timestamp metadata differs only.
 
-## Run and verify
+## How to run and verify
 
 ```sh
 npm ci
-npm run typecheck
 npm test
+npm run typecheck
+npm run lint
 npm run build
 npm run test:package
 ```
 
-The static deployment artifact is `dist/site/`; its downloadable MV3 ZIP is
-`dist/site/downloads/speak-page-actions.zip`. Demo entry points are `/demo`
-and `/?demo=1`.
+The site build is `dist/site/`; the MV3 package is
+`dist/site/downloads/speak-page-actions.zip`. Use `/demo` or `/?demo=1` for
+the isolated sample.
 
-## Exact local evidence
+## Exact evidence
 
-- Clean dependency install: `npm ci`.
-- Full test suite: `npm test` — 5 Vitest unit tests and 26 Playwright browser
-  tests passed.
-- All 15 exact commands in `.factory/claims.json` were run individually after
-  the clean install and passed.
-- `npm run typecheck`, `npm run build`, and `npm run test:package` passed.
-- `npm audit --json` reports 0 low, moderate, high, or critical findings.
-- Local static `verify-url.sh` passed at `http://127.0.0.1:4173`: 200, 541ms,
-  one h1, main, title/lang/alt/button checks, and no console errors. Evidence:
-  `test-results/verify-local/verify.json`.
-- Playwright Axe checks report zero serious/critical issues on home, demo,
-  Privacy, Terms, and 404 at phone size and in dark mode.
-- Lighthouse static preview: Performance 100 and Accessibility 100. Evidence:
-  `test-results/lighthouse-local.json`.
-- Phone evidence: `test-results/polish-1-home-390.png` and
-  `test-results/polish-1-demo-390.png`.
+- Every one of the 15 commands in `.factory/claims.json` passed individually
+  after the clean install.
+- `CI=1 npm test` passed: 5 Vitest unit tests and 26 Playwright tests.
+  Typecheck, lint, package check, and exact production build also passed.
+- Fresh live first read clearly identifies what it does, who it serves, and
+  the one-click **Try it with sample data** action.
+- At 390px the live demo passed normal action, unknown-command recovery,
+  destructive cancel/confirm, undo, and demo-storage isolation. It reloaded
+  offline after first visit with service-worker cache `speak-page-actions-v3`.
+- Fresh demo requests stayed same-origin. The only intentional extension
+  network destination is the disclosed Sociobot license verifier.
+- Axe reported zero serious/critical findings across home, demo, legal pages,
+  and 404 at 390px. Keyboard Skip link had a visible 3px focus ring.
+- Response headers include HSTS, nosniff, strict referrer policy, and CSP with
+  `frame-ancestors 'none'`; hashed JS is immutable cached.
+- The product verifier rate limit was enforced after 30 rapid requests: request
+  31 returned `429` with `Retry-After: 4`.
 
-## Deployment and live recheck
+Full evidence, including all claim IDs and defects by severity, is in
+`.factory/verification-5.md`.
 
-- Repair commit: `47f7c8f7c9242f66bf41fb44c98a055b7968e111`, pushed to `main`.
-- Static work-order deploy: `/opt/fleet/lib/deploy-static.sh speak-page-actions
-  dist/site`; Azure deployment `cf07100c-d204-4a58-8e06-b4eaf673de67`
-  succeeded to `blue-island-0407bcf10.7.azurestaticapps.net` and the custom
-  domain returned HTTPS 200.
-- Cold live root check: 818ms, no page errors, title/lang/one h1/main/alt and
-  named-button checks passed. Evidence: `test-results/verify-live/verify.json`.
-- Cold live 390×844 recheck passed: the full demo action and explanation fit
-  in the first screen; `?demo=1` displays all four controls and seeded result;
-  Reset/Start isolation preserves real storage; route title/OG data are
-  correct; unknown URLs return HTTP 404; live Axe reports zero serious or
-  critical issues on home and demo. Evidence:
-  `test-results/polish-1-live-home-390.png` and
-  `test-results/polish-1-live-demo-390.png`.
-- The live downloadable extension ZIP SHA-256 equals the deployed local build:
-  `d78bab29e16b2ff431021054a154044b76f62b5a2595be078517be2eb971cde3`.
-  Live `robots.txt` and `sitemap.xml` return 200; an unknown route returns 404.
+## Known gaps and next steps
 
-## Known gaps
-
-None. The extension still honestly cannot undo server-side actions or actions
-after page navigation; this is stated in Terms and is not advertised as an
-undo capability.
+No release-blocking, high, medium, or low defects found. The documented limit
+remains: server-side actions and actions after navigation cannot be undone;
+this is accurately stated in Terms.
