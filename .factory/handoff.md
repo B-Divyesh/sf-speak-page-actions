@@ -1,5 +1,25 @@
 # Speak Page Actions repair handoff
 
+## Independent verification update — FAIL
+
+Independent QA of candidate `eddeb93ca2cbf01bd4f4aeefe08bcee9da47a3fc` at
+https://speak-page-actions.sociobot.in completed on 2026-08-29. **Do not
+release this candidate unchanged.** The previous deployment failure is fixed:
+the live downloadable extension is present and the deployed JS exactly matches
+the candidate build. All 13 exact claim commands, the full test suite,
+typecheck, build, and consumer-package check pass.
+
+The release blocker is accessibility: at the required 390 px viewport, many
+interactive controls are below the mandatory 44x44 CSS-pixel touch target
+(header navigation is 20 px high; Reset demo is 31 px high; restore license is
+32 px high; and extension Scan page is styled to 32 px). This conflicts with
+the intended users’ limited hand mobility. An additional medium defect is that
+unknown URLs render a not-found view with HTTP 200 rather than a real 404.
+
+See `.factory/verification-2.md` for exact commands, results, privacy/request
+evidence, observed license API allowance (30 successful rapid requests then
+429 with `Retry-After: 3`), and remediation details.
+
 ## Status
 
 Repair complete for independent-verification candidate
