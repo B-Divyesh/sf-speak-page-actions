@@ -46,4 +46,11 @@ existed.
   `test-results/lighthouse-local.json`.
 - `npm audit --json`: 0 findings.
 
-Live recheck is recorded in the handoff after deployment.
+## Live deployment recheck
+
+Azure deployment `cf07100c-d204-4a58-8e06-b4eaf673de67` completed successfully
+to the existing Static Web App and `https://speak-page-actions.sociobot.in`
+returned the new `index-CdAGwGlR.js` asset. A cold 390×844 live recheck passed
+the F-1-3, F-1-4, F-1-11, and F-1-12 flows; live Axe on home and demo had zero
+serious/critical issues. See `test-results/verify-live/verify.json` and the
+two `test-results/polish-1-live-*.png` screenshots.

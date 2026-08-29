@@ -50,8 +50,20 @@ and `/?demo=1`.
 
 ## Deployment and live recheck
 
-Commit and deployment details, plus cold live URL verification, are appended
-after the work-order push completes.
+- Repair commit: `47f7c8f7c9242f66bf41fb44c98a055b7968e111`, pushed to `main`.
+- Static work-order deploy: `/opt/fleet/lib/deploy-static.sh speak-page-actions
+  dist/site`; Azure deployment `cf07100c-d204-4a58-8e06-b4eaf673de67`
+  succeeded to `blue-island-0407bcf10.7.azurestaticapps.net` and the custom
+  domain returned HTTPS 200.
+- Cold live root check: 818ms, no page errors, title/lang/one h1/main/alt and
+  named-button checks passed. Evidence: `test-results/verify-live/verify.json`.
+- Cold live 390×844 recheck passed: the full demo action and explanation fit
+  in the first screen; `?demo=1` displays all four controls and seeded result;
+  Reset/Start isolation preserves real storage; route title/OG data are
+  correct; unknown URLs return HTTP 404; live Axe reports zero serious or
+  critical issues on home and demo. Evidence:
+  `test-results/polish-1-live-home-390.png` and
+  `test-results/polish-1-live-demo-390.png`.
 
 ## Known gaps
 
