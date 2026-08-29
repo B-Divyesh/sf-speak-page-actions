@@ -20,23 +20,29 @@ export function installPageAgent() {
   const financialActionWords = /\b(?:transfer|wire|withdraw(?:al)?|deposit|cash out|send money|move money|pay bill|add payee|beneficiary)\b/i;
   const financialPageMessage = 'Speak Page Actions does not operate banking or financial pages.';
   const unavailableActionMessage = 'That action is no longer visible or available. Scan the page again.';
+  const changedActionMessage = 'That action changed since the last scan. Scan the page again.';
+  const actionIdByElement = new WeakMap<HTMLElement, string>();
+  const elementByActionId = new Map<string, HTMLElement>();
+  let nextActionId = 0;
   let undo: (() => boolean) | undefined;
 
+  const cleanLabel = (value: string) => value.replace(/\s+/g, ' ').trim();
   const labelFor = (element: HTMLElement) => {
     const labelledBy = element.getAttribute('aria-labelledby');
     if (labelledBy) {
-      const named = labelledBy.split(/\s+/).map((id) => document.getElementById(id)?.textContent || '').join(' ').trim();
+      const named = cleanLabel(labelledBy.split(/\s+/).map((id) => document.getElementById(id)?.textContent || '').join(' '));
       if (named) return named;
     }
     const aria = element.getAttribute('aria-label');
-    if (aria) return aria.trim();
+    if (aria?.trim()) return cleanLabel(aria);
     if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement) {
-      const label = element.labels?.[0]?.textContent?.trim();
+      const label = cleanLabel([...element.labels || []].map((item) => item.textContent || '').join(' '));
       if (label) return label;
-      if ((element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) && element.placeholder) return element.placeholder.trim();
-      if (element.name) return element.name.trim();
+      if (element instanceof HTMLInputElement && ['button', 'submit', 'reset'].includes(element.type) && element.value) return cleanLabel(element.value);
+      if (element instanceof HTMLInputElement && element.type === 'image' && element.alt) return cleanLabel(element.alt);
+      return '';
     }
-    return (element.innerText || element.textContent || element.getAttribute('title') || '').replace(/\s+/g, ' ').trim();
+    return cleanLabel(element.innerText || element.textContent || element.getAttribute('title') || '');
   };
   const isAvailable = (element: HTMLElement) => {
     if (element.closest('[hidden], [inert], [aria-hidden="true"], [aria-disabled="true"]') || element.matches(':disabled')) return false;
@@ -78,14 +84,18 @@ export function installPageAgent() {
     (element instanceof HTMLButtonElement && element.type === 'submit' && Boolean(element.form))
     || (element instanceof HTMLInputElement && ['submit', 'image'].includes(element.type) && Boolean(element.form));
   const needsReview = (element: HTMLElement, label: string) => destructiveWords.test(separatedWords(label)) || submitsForm(element);
-  const nodeId = (element: Element, index: number) => {
-    const previous = element.getAttribute('data-spa-id');
-    if (previous) return previous;
-    const id = `spa-${index}`;
-    element.setAttribute('data-spa-id', id);
+  const nodeId = (element: HTMLElement) => {
+    const previous = actionIdByElement.get(element);
+    if (previous) {
+      elementByActionId.set(previous, element);
+      return previous;
+    }
+    const id = `spa-${nextActionId++}`;
+    actionIdByElement.set(element, id);
+    elementByActionId.set(id, element);
     return id;
   };
-  const collect = () => [...document.querySelectorAll<HTMLElement>(selector)].flatMap((element, index) => {
+  const describe = (element: HTMLElement) => {
     if (!isAvailable(element) || element instanceof HTMLInputElement && element.type === 'password') return [];
     const label = labelFor(element);
     if (!label) return [];
@@ -94,15 +104,25 @@ export function installPageAgent() {
     // HTML buttons submit their owner form by default, even with no `type`
     // attribute. Treat that browser behaviour (and image inputs) as sensitive,
     // rather than relying on the author having written type="submit".
-    return [{ id: nodeId(element, index), label, kind, destructive: needsReview(element, label) }];
-  });
+    return [{ id: nodeId(element), label, kind, destructive: needsReview(element, label) }];
+  };
+  const collect = () => {
+    const actions = [...document.querySelectorAll<HTMLElement>(selector)].flatMap(describe);
+    const activeIds = new Set(actions.map((action) => action.id));
+    for (const id of elementByActionId.keys()) if (!activeIds.has(id)) elementByActionId.delete(id);
+    return actions;
+  };
   const undoContainer = (element: HTMLElement) => element.closest<HTMLElement>('[data-spa-undoable], [role="listitem"], li, tr, article');
-  const activate = (id: string, confirmed = false) => {
-    const element = document.querySelector<HTMLElement>(`[data-spa-id="${CSS.escape(id)}"]`);
-    if (!element) return { ok: false, message: 'That action is no longer on this page. Scan the page again.' };
+  const activate = (id: string, expected: { label?: unknown; kind?: unknown; destructive?: unknown } | undefined, confirmed = false) => {
+    const element = elementByActionId.get(id);
+    if (!element || !document.contains(element)) return { ok: false, message: 'That action is no longer on this page. Scan the page again.' };
     if (!isAvailable(element)) return { ok: false, message: unavailableActionMessage };
-    const label = labelFor(element);
-    const sensitive = needsReview(element, label);
+    const [current] = describe(element);
+    if (!current
+      || expected?.label !== current.label
+      || expected?.kind !== current.kind
+      || expected?.destructive !== current.destructive) return { ok: false, message: changedActionMessage };
+    const { label, destructive: sensitive } = current;
     if (sensitive && !confirmed) return { ok: false, needsReview: true, message: `Review ${label} before using it.` };
     const clickableInput = element instanceof HTMLInputElement && ['button', 'submit', 'reset', 'checkbox', 'radio', 'image'].includes(element.type);
     if ((element instanceof HTMLInputElement && !clickableInput) || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement) {
@@ -130,7 +150,7 @@ export function installPageAgent() {
   };
 
   chrome.runtime.onMessage.addListener((message: unknown) => {
-    const typed = message as { type?: string; id?: string; confirmed?: boolean };
+    const typed = message as { type?: string; id?: string; expected?: { label?: unknown; kind?: unknown; destructive?: unknown }; confirmed?: boolean };
     if (typed?.type === 'SPA_COLLECT') {
       return Promise.resolve(isFinancialPage()
         ? { actions: [], title: document.title, blocked: true, message: financialPageMessage }
@@ -138,7 +158,7 @@ export function installPageAgent() {
     }
     if (typed?.type === 'SPA_ACTIVATE' && typed.id) {
       if (isFinancialPage()) return Promise.resolve({ ok: false, blocked: true, message: financialPageMessage });
-      return Promise.resolve(activate(typed.id, typed.confirmed === true));
+      return Promise.resolve(activate(typed.id, typed.expected, typed.confirmed === true));
     }
     if (typed?.type === 'SPA_UNDO') {
       if (!undo) return Promise.resolve({ ok: false, message: 'There is no page action that can be undone.' });

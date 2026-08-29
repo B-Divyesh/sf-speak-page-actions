@@ -5,7 +5,13 @@ import { tmpdir } from 'node:os';
 import { installPageAgent } from '../src/lib/page-agent';
 import { findAction } from '../src/lib/actions';
 
-async function extensionPopup(mockSpeech = false, unsupportedSpeech = false, fixturePath = 'extension-fixture.html') {
+async function extensionPopup(
+  mockSpeech = false,
+  unsupportedSpeech = false,
+  fixturePath = 'extension-fixture.html',
+  setupFixture?: (fixture: import('@playwright/test').Page) => Promise<void>,
+  speechStartThrows = false,
+) {
   const userDataDir = mkdtempSync(`${tmpdir()}/speak-page-actions-`);
   const context = await chromium.launchPersistentContext(userDataDir, {
     channel: 'chromium', headless: true,
@@ -15,6 +21,7 @@ async function extensionPopup(mockSpeech = false, unsupportedSpeech = false, fix
   const extensionId = new URL(worker.url()).hostname;
   const fixture = await context.newPage();
   await fixture.goto(`http://127.0.0.1:4173/${fixturePath}`);
+  await setupFixture?.(fixture);
   const popup = await context.newPage();
   if (mockSpeech) await popup.addInitScript(() => {
     class MockRecognition {
@@ -27,6 +34,14 @@ async function extensionPopup(mockSpeech = false, unsupportedSpeech = false, fix
   });
   if (unsupportedSpeech) await popup.addInitScript(() => {
     (window as any).SpeechRecognition = class { start() {} stop() {} };
+  });
+  if (speechStartThrows) await popup.addInitScript(() => {
+    (window as any).SpeechRecognition = class {
+      lang = ''; interimResults = false; continuous = false; processLocally = false;
+      onresult = null; onerror = null; onend = null;
+      start() { throw new DOMException('The local recognizer is unavailable.', 'NotSupportedError'); }
+      stop() {}
+    };
   });
   await popup.goto(`chrome-extension://${extensionId}/popup.html`);
   await expect(popup.locator('#status')).not.toContainText('Scanning visible actions');
@@ -215,11 +230,11 @@ test('@claim:destructive-review requires review before every documented sensitiv
   const sensitiveActions = labels.map((label) => result.actions.find((action) => action.label === label)!);
   expect(sensitiveActions.every((action) => action?.destructive)).toBe(true);
   for (const action of sensitiveActions) {
-    const blocked = await page.evaluate((id) => (window as any).sendSpaMessage({ type: 'SPA_ACTIVATE', id }), action.id);
+    const blocked = await page.evaluate((expected) => (window as any).sendSpaMessage({ type: 'SPA_ACTIVATE', id: expected.id, expected }), action);
     expect(blocked.needsReview).toBe(true);
   }
   expect(await page.evaluate(() => (window as any).__activated)).toEqual([]);
-  for (const action of sensitiveActions) await page.evaluate((id) => (window as any).sendSpaMessage({ type: 'SPA_ACTIVATE', id, confirmed: true }), action.id);
+  for (const action of sensitiveActions) await page.evaluate((expected) => (window as any).sendSpaMessage({ type: 'SPA_ACTIVATE', id: expected.id, expected, confirmed: true }), action);
   expect(await page.evaluate(() => (window as any).__activated)).toEqual(labels);
 
   const { context, popup, fixture } = await extensionPopup();
@@ -278,6 +293,8 @@ test('@claim:visible-labels lists visible buttons, links, and labelled fields', 
     <button>Save address</button>
     <a href="#review">Review order</a>
     <label for="shipping">Shipping method</label><select id="shipping"><option>Standard</option></select>
+    <input name="internalTrackingId">
+    <input placeholder="Visible hint">
     <button style="display:none">Display none action</button>
     <button style="position:fixed;left:-500px">Offscreen action</button>
     <button style="opacity:0">Transparent action</button>
@@ -291,6 +308,60 @@ test('@claim:visible-labels lists visible buttons, links, and labelled fields', 
   await installAgent(page);
   const result = await page.evaluate(() => (window as typeof window & { sendSpaMessage: (message: unknown) => Promise<{ actions: Array<{ label: string }> }> }).sendSpaMessage({ type: 'SPA_COLLECT' }));
   expect(result.actions.map((action) => action.label)).toEqual(['Save address', 'Review order', 'Shipping method']);
+});
+
+test('packaged extension excludes name-only and placeholder-only fields', async () => {
+  const { context, popup } = await extensionPopup(false, false, 'extension-fixture.html', async (fixture) => {
+    await fixture.locator('main').evaluate((main) => {
+      main.innerHTML = `
+        <h1>Field labels</h1>
+        <input name="internalTrackingId">
+        <input placeholder="Visible hint">
+        <label for="account-reference">Account reference</label><input id="account-reference">
+        <input aria-label="Accessible nickname">
+        <button>Save address</button>
+      `;
+    });
+  });
+  try {
+    await expect(popup.locator('#action-list button')).toHaveCount(3);
+    await expect(popup.getByRole('button', { name: /internalTrackingId/ })).toHaveCount(0);
+    await expect(popup.getByRole('button', { name: /Visible hint/ })).toHaveCount(0);
+    await expect(popup.getByRole('button', { name: /Account reference/ })).toBeVisible();
+    await expect(popup.getByRole('button', { name: /Accessible nickname/ })).toBeVisible();
+    await expect(popup.getByRole('button', { name: /Save address/ })).toBeVisible();
+  } finally { await context.close(); }
+});
+
+test('packaged extension keeps dynamic targets distinct and rejects a changed label', async () => {
+  const { context, popup, fixture } = await extensionPopup();
+  try {
+    await fixture.evaluate(() => {
+      (window as any).__dangerRuns = 0;
+      const danger = document.createElement('button');
+      danger.id = 'danger';
+      danger.textContent = 'Delete account';
+      danger.addEventListener('click', () => {
+        (window as any).__dangerRuns += 1;
+        document.querySelector('#result')!.textContent = 'DANGER';
+      });
+      document.querySelector('#save')!.before(danger);
+    });
+    await popup.getByRole('button', { name: 'Scan page' }).click();
+    await expect(popup.getByRole('button', { name: /Delete account/ })).toBeVisible();
+    await expect(popup.getByRole('button', { name: /Save address/ })).toBeVisible();
+    expect(await fixture.locator('[data-spa-id]').count()).toBe(0);
+
+    await popup.getByRole('button', { name: /Save address/ }).click();
+    await expect(popup.getByRole('dialog')).toBeHidden();
+    await expect(fixture.locator('#result')).toHaveText('Saved address.');
+    expect(await fixture.evaluate(() => (window as any).__dangerRuns)).toBe(0);
+
+    await fixture.locator('#review').evaluate((element) => { element.textContent = 'Changed order'; });
+    await popup.getByRole('button', { name: /Review order/ }).click();
+    await expect(popup.locator('#status')).toHaveText('That action changed since the last scan. Scan the page again.');
+    await expect(fixture.locator('#result')).toHaveText('Saved address.');
+  } finally { await context.close(); }
 });
 
 test('page actions are revalidated before activation and never report success for unavailable controls', async ({ page }) => {
@@ -315,14 +386,14 @@ test('page actions are revalidated before activation and never report success fo
     (document.querySelector('[data-spa-id="stale-3"]') as HTMLButtonElement).disabled = true;
     document.querySelector('[data-spa-id="stale-4"]')?.setAttribute('aria-disabled', 'true');
   });
-  const unavailable = await page.evaluate(async () => Promise.all(
-    [...Array(5)].map((_, index) => (window as any).sendSpaMessage({ type: 'SPA_ACTIVATE', id: `stale-${index}` })),
-  ));
+  const unavailable = await page.evaluate(async (expectedActions: Array<{ id: string; label: string; kind: string; destructive: boolean }>) => Promise.all(
+    expectedActions.map((expected) => (window as any).sendSpaMessage({ type: 'SPA_ACTIVATE', id: expected.id, expected })),
+  ), collected.actions.slice(1));
   expect(unavailable).toEqual(Array(5).fill({ ok: false, message: 'That action is no longer visible or available. Scan the page again.' }));
   expect(await page.evaluate(() => (window as any).__clicks)).toBe(0);
   const disabled = await page.evaluate(() => (window as any).sendSpaMessage({ type: 'SPA_ACTIVATE', id: 'already-disabled' }));
-  expect(disabled).toEqual({ ok: false, message: 'That action is no longer visible or available. Scan the page again.' });
-  const enabled = await page.evaluate(() => (window as any).sendSpaMessage({ type: 'SPA_ACTIVATE', id: 'enabled' }));
+  expect(disabled).toEqual({ ok: false, message: 'That action is no longer on this page. Scan the page again.' });
+  const enabled = await page.evaluate((expected) => (window as any).sendSpaMessage({ type: 'SPA_ACTIVATE', id: expected.id, expected }), collected.actions[0]);
   expect(enabled).toMatchObject({ ok: true, message: 'Used Enabled action.' });
   expect(await page.evaluate(() => (window as any).__clicks)).toBe(1);
 });
@@ -344,6 +415,22 @@ test('@claim:push-to-talk starts and stops for pointer, Space, and Enter holds',
     await talk.dispatchEvent('pointerdown'); await expect(talk).toHaveAttribute('aria-pressed', 'true'); await talk.dispatchEvent('pointercancel');
     expect(await popup.evaluate(() => [(window as any).__speechStarts, (window as any).__speechStops])).toEqual([4, 4]);
     await expect(talk).toHaveAttribute('aria-pressed', 'false');
+  } finally { await context.close(); }
+});
+
+test('packaged extension restores the idle state when speech start throws', async () => {
+  const { context, popup, fixture } = await extensionPopup(false, false, 'extension-fixture.html', undefined, true);
+  try {
+    const talk = popup.locator('#talk');
+    await talk.dispatchEvent('pointerdown');
+    await expect(talk).toHaveAttribute('aria-pressed', 'false');
+    await expect(talk).toHaveText('● Hold to speak');
+    await expect(talk).toHaveAttribute('aria-label', 'Hold to speak. Hold Space or Enter with the keyboard.');
+    await expect(popup.locator('#status')).toHaveText('On-device speech was not available. Type the command instead.');
+
+    await popup.locator('#command').fill('click save address');
+    await popup.getByRole('button', { name: 'Run command' }).click();
+    await expect(fixture.locator('#result')).toHaveText('Saved address.');
   } finally { await context.close(); }
 });
 
@@ -506,7 +593,7 @@ test('@claim:undo-local-delete restores the complete removed item', async ({ pag
   const collected = await page.evaluate(() => (window as typeof window & { sendSpaMessage: (message: unknown) => Promise<{ actions: Array<{ id: string; label: string }> }>; }).sendSpaMessage({ type: 'SPA_COLLECT' }));
   const action = collected.actions.find((item) => item.label === 'Delete saved draft');
   expect(action).toBeDefined();
-  const activated = await page.evaluate((id) => (window as typeof window & { sendSpaMessage: (message: unknown) => Promise<{ canUndo?: boolean }> }).sendSpaMessage({ type: 'SPA_ACTIVATE', id, confirmed: true }), action!.id);
+  const activated = await page.evaluate((expected) => (window as typeof window & { sendSpaMessage: (message: unknown) => Promise<{ canUndo?: boolean }> }).sendSpaMessage({ type: 'SPA_ACTIVATE', id: expected.id, expected, confirmed: true }), action!);
   expect(activated.canUndo).toBe(true);
   await expect(page.locator('#item')).toHaveCount(0);
   const undone = await page.evaluate(() => (window as typeof window & { sendSpaMessage: (message: unknown) => Promise<{ ok: boolean }> }).sendSpaMessage({ type: 'SPA_UNDO' }));

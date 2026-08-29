@@ -154,6 +154,7 @@ README string to appear in this file.
 | The page changed before that action could run. | 8 | popup error |
 | Scan the page again. | 4 | popup error action |
 | That action is no longer visible or available. | 8 | extension unavailable-action error |
+| That action changed since the last scan. | 7 | extension changed-action error |
 | No visible action matched those words. | 6 | popup command error |
 | Say or type the label shown below. | 7 | popup command error action |
 | Paste your Pro license token. | 5 | popup license error |
@@ -168,6 +169,7 @@ README string to appear in this file.
 | Restore Pro to use saved command names. | 7 | popup command error |
 | Speech recognition is unavailable here. | 5 | popup speech error |
 | On-device speech recognition is unavailable here. | 6 | popup speech error |
+| On-device speech was not available. | 5 | popup speech-start error |
 | Type the command instead. | 4 | popup speech error action |
 | Listening. | 1 | popup speech state |
 | Listening… release to stop | 4 | popup speak control state |

@@ -43,7 +43,7 @@ function openReview(action: PageAction) {
   review.showModal();
 }
 function resetReview() { pending = undefined; confirmAction.textContent = defaultConfirmLabel; }
-async function activate(action: PageAction, confirmed = false) { try { const result = await pageMessage({ type: 'SPA_ACTIVATE', id: action.id, confirmed }); if (result.blocked) { pageBlocked = true; actions = []; render(); setStatus(result.message || financialPageMessage); return; } if (result.needsReview) { openReview(action); return; } setStatus(result.message); undo.hidden = !result.canUndo; if (result.ok) await scan(); } catch { setStatus('The page changed before that action could run. Scan the page again.'); } }
+async function activate(action: PageAction, confirmed = false) { try { const result = await pageMessage({ type: 'SPA_ACTIVATE', id: action.id, expected: { label: action.label, kind: action.kind, destructive: action.destructive }, confirmed }); if (result.blocked) { pageBlocked = true; actions = []; render(); setStatus(result.message || financialPageMessage); return; } if (result.needsReview) { openReview(action); return; } setStatus(result.message); undo.hidden = !result.canUndo; if (result.ok) await scan(); } catch { setStatus('The page changed before that action could run. Scan the page again.'); } }
 function use(action: PageAction) { if (action.destructive) openReview(action); else activate(action); }
 async function runCommand() {
   if (pageBlocked) { setStatus(financialPageMessage); return; }
@@ -112,6 +112,12 @@ async function loadSavedLicense() {
     }).catch(() => undefined);
   }
 }
+function showListening(active: boolean) {
+  listening = active;
+  talk.setAttribute('aria-pressed', String(active));
+  talk.textContent = active ? '● Listening… release to stop' : '● Hold to speak';
+  talk.setAttribute('aria-label', active ? 'Listening. Release to stop.' : 'Hold to speak. Hold Space or Enter with the keyboard.');
+}
 function makeRecognition() {
   const Constructor = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
   if (!Constructor) { setStatus('Speech recognition is unavailable here. Type the command instead.'); return; }
@@ -120,11 +126,11 @@ function makeRecognition() {
   candidate.processLocally = true;
   candidate.lang = navigator.language || 'en-US'; candidate.interimResults = false; candidate.continuous = false;
   candidate.onresult = (event) => { command.value = event.results[event.results.length - 1][0].transcript; setStatus(`Heard “${command.value}”.`); void runCommand(); };
-  candidate.onerror = (event) => { setStatus(event.error === 'not-allowed' ? 'Microphone access was denied. Allow it, or type the command.' : 'On-device speech was not available. Type the command instead.'); };
-  candidate.onend = () => { listening = false; talk.setAttribute('aria-pressed', 'false'); talk.textContent = '● Hold to speak'; talk.setAttribute('aria-label', 'Hold to speak. Hold Space or Enter with the keyboard.'); };
+  candidate.onerror = (event) => { showListening(false); setStatus(event.error === 'not-allowed' ? 'Microphone access was denied. Allow it, or type the command.' : 'On-device speech was not available. Type the command instead.'); };
+  candidate.onend = () => { showListening(false); };
   recognition = candidate;
 }
-function startListening() { if (listening) return; if (!recognition) makeRecognition(); if (!recognition) return; try { listening = true; talk.setAttribute('aria-pressed', 'true'); talk.textContent = '● Listening… release to stop'; talk.setAttribute('aria-label', 'Listening. Release to stop.'); setStatus('Listening. Release when you finish the action label.'); recognition.start(); } catch { listening = false; /* recognition already started */ } }
+function startListening() { if (listening) return; if (!recognition) makeRecognition(); if (!recognition) return; try { showListening(true); setStatus('Listening. Release when you finish the action label.'); recognition.start(); } catch { showListening(false); setStatus('On-device speech was not available. Type the command instead.'); } }
 function stopListening() { if (!listening) return; recognition?.stop(); }
 $('scan').addEventListener('click', scan); $('run').addEventListener('click', runCommand); command.addEventListener('keydown', (e) => { if (e.key === 'Enter') runCommand(); });
 talk.addEventListener('pointerdown', () => { ignoreTalkClick = true; startListening(); }); talk.addEventListener('pointerup', stopListening); talk.addEventListener('pointercancel', stopListening); talk.addEventListener('pointerleave', stopListening); talk.addEventListener('click', () => { if (ignoreTalkClick) { ignoreTalkClick = false; return; } }); talk.addEventListener('keydown', (e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); startListening(); }}); talk.addEventListener('keyup', (e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); stopListening(); }});

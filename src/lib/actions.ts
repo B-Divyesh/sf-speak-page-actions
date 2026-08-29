@@ -38,18 +38,20 @@ export function visible(element: HTMLElement) {
 }
 
 export function labelFor(element: HTMLElement) {
+  const cleanLabel = (value: string) => value.replace(/\s+/g, ' ').trim();
   const labelledBy = element.getAttribute('aria-labelledby');
   if (labelledBy) {
-    const named = labelledBy.split(/\s+/).map((id) => document.getElementById(id)?.textContent || '').join(' ').trim();
+    const named = cleanLabel(labelledBy.split(/\s+/).map((id) => document.getElementById(id)?.textContent || '').join(' '));
     if (named) return named;
   }
   const aria = element.getAttribute('aria-label');
-  if (aria) return aria.trim();
+  if (aria?.trim()) return cleanLabel(aria);
   if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement) {
-    const label = element.labels?.[0]?.textContent?.trim();
+    const label = cleanLabel([...element.labels || []].map((item) => item.textContent || '').join(' '));
     if (label) return label;
-    if ((element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) && element.placeholder) return element.placeholder.trim();
-    if (element.name) return element.name.trim();
+    if (element instanceof HTMLInputElement && ['button', 'submit', 'reset'].includes(element.type) && element.value) return cleanLabel(element.value);
+    if (element instanceof HTMLInputElement && element.type === 'image' && element.alt) return cleanLabel(element.alt);
+    return '';
   }
-  return (element.innerText || element.textContent || element.getAttribute('title') || '').replace(/\s+/g, ' ').trim();
+  return cleanLabel(element.innerText || element.textContent || element.getAttribute('title') || '');
 }
