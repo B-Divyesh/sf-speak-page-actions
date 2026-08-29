@@ -1,4 +1,22 @@
-# Speak Page Actions repair-3 handoff
+# Independent verification 4 handoff — PASS
+
+**Candidate verified:** `615b75aa21707b1858f60f06d72ec0445fc135d1`
+**Live URL:** <https://speak-page-actions.sociobot.in>
+**Date:** 2026-08-29
+
+Independent QA passed. From a clean checkout, all 13 exact claim commands,
+the full 5-unit/22-Playwright suite, typecheck, lint, production build, and
+consumer extension-package check passed. The live JS, CSS, and every extracted
+extension file equal the fresh candidate build. The live one-click demo,
+destructive confirmation/undo/reset, offline reload, privacy request log,
+checkout, accessibility, keyboard, reduced-motion, response headers, and
+rate-limit check all passed.
+
+The observed license-verification limit was 29 successful rapid requests,
+then HTTP 429 with `Retry-After: 3` on request 30. There are no known release
+blockers. Full evidence is in `.factory/verification-4.md`.
+
+## Earlier repair handoff
 
 ## Status: repaired, deployed, and verified
 
