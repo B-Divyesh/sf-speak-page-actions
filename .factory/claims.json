@@ -19,5 +19,75 @@
     "where": "README",
     "test": "npm test -- --grep @claim:offline-reload",
     "sandbox": "fresh browser context; visit demo, wait for service worker, set context offline, reload demo"
+  },
+  {
+    "id": "active-tab-only",
+    "claim": "The extension scans only the active page after you open it",
+    "where": "landing steps, README, Privacy",
+    "test": "npm test -- --grep @claim:active-tab-only",
+    "sandbox": "production extension package; assert activeTab permission and no declarative content script or all-site host permission"
+  },
+  {
+    "id": "on-device-speech",
+    "claim": "Spoken commands run only when on-device speech processing is available",
+    "where": "landing facts, README, Privacy",
+    "test": "npm test -- --grep @claim:on-device-speech",
+    "sandbox": "production extension package; assert processLocally is required and its typed fallback is present"
+  },
+  {
+    "id": "destructive-review",
+    "claim": "Delete and other sensitive labels are marked for review",
+    "where": "landing steps, extension review dialog",
+    "test": "npm test -- --grep @claim:destructive-review",
+    "sandbox": "browser page with concatenated inline action text; collect actions and assert Delete saved draft is destructive"
+  },
+  {
+    "id": "undo-local-delete",
+    "claim": "Undo restores a locally removed page item when the page allows it",
+    "where": "extension undo button, Terms",
+    "test": "npm test -- --grep @claim:undo-local-delete",
+    "sandbox": "browser page where Delete saved draft removes its containing list item; activate then undo and assert the complete item returns"
+  },
+  {
+    "id": "visible-labels",
+    "claim": "The extension lists visible labelled controls on the active page",
+    "where": "landing facts and preview",
+    "test": "npm test -- --grep @claim:visible-labels",
+    "sandbox": "browser page with one visible labelled button and one hidden button; collect actions and assert only the visible label appears"
+  },
+  {
+    "id": "password-exclusion",
+    "claim": "Password fields are never listed",
+    "where": "landing limits, README, Privacy, extension footer",
+    "test": "npm test -- --grep @claim:password-exclusion",
+    "sandbox": "browser page with a password field and a normal button; collect actions and assert Password is absent"
+  },
+  {
+    "id": "push-to-talk",
+    "claim": "Speech starts only while you hold the speak control",
+    "where": "extension popup, README",
+    "test": "npm test -- --grep @claim:push-to-talk",
+    "sandbox": "production extension popup bundle; assert pointer down starts and pointer up stops listening, with no periodic recording loop"
+  },
+  {
+    "id": "pro-aliases",
+    "claim": "A $12 one-time Pro license adds local command aliases",
+    "where": "pricing section, README",
+    "test": "npm test -- --grep @claim:pro-aliases",
+    "sandbox": "landing page; assert checkout link, $12 label, and restore-license control"
+  },
+  {
+    "id": "core-free",
+    "claim": "Core page actions and safety checks stay free",
+    "where": "pricing section",
+    "test": "npm test -- --grep @claim:core-free",
+    "sandbox": "fresh demo browser storage; run Save address and assert it works with no saved license token"
+  },
+  {
+    "id": "page-data-local",
+    "claim": "Page labels stay in your browser",
+    "where": "Privacy",
+    "test": "npm test -- --grep @claim:page-data-local",
+    "sandbox": "inspect the injected page agent used for collection and activation; assert it contains no network API"
   }
 ]

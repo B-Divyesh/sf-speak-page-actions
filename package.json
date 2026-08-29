@@ -6,12 +6,15 @@
   "scripts": {
     "dev": "wxt",
     "dev:site": "vite --config vite.site.config.ts",
-    "build:extension": "wxt build && rm -rf dist/extension && mkdir -p dist/extension && cp -R .output/chrome-mv3/. dist/extension/ && mkdir -p dist/site/downloads && cd dist/extension && zip -qr ../site/downloads/speak-page-actions.zip .",
-    "build:site": "vite build --config vite.site.config.ts",
-    "build": "npm run build:site && npm run build:extension",
-    "test": "npm run test:unit && npm run test:claims",
+    "build:extension": "wxt build && rm -rf dist/extension && mkdir -p dist/extension && cp -R .output/chrome-mv3/. dist/extension/ && cd dist/extension && zip -qr speak-page-actions.zip .",
+    "build:site": "npm run build:extension && vite build --config vite.site.config.ts && mkdir -p dist/site/downloads && cp dist/extension/speak-page-actions.zip dist/site/downloads/speak-page-actions.zip",
+    "build": "npm run build:site",
+    "test": "node scripts/test.mjs",
     "test:unit": "vitest run tests/actions.test.ts",
     "test:claims": "playwright test",
+    "typecheck": "npx tsc --noEmit",
+    "lint": "npm run typecheck",
+    "test:package": "node scripts/check-package.mjs",
     "preview": "vite preview --config vite.site.config.ts --host 127.0.0.1"
   },
   "devDependencies": {

@@ -9,7 +9,7 @@ export type PageAction = {
 const destructiveWords = /\b(delete|remove|discard|destroy|publish|send|submit|pay|purchase|place order|sign out)\b/i;
 
 export function normaliseWords(value: string) {
-  return value.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+  return value.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/([A-Z])([A-Z][a-z])/g, '$1 $2').toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
 export function commandTarget(command: string) {
@@ -24,7 +24,9 @@ export function findAction(command: string, actions: PageAction[]) {
 }
 
 export function isDestructive(label: string, element?: Element) {
-  return destructiveWords.test(label) || element?.getAttribute('type') === 'submit';
+  // Inline icon/status text can run into the visible label ("BUTTONDelete").
+  // Insert a word break at lower-to-upper transitions before checking it.
+  return destructiveWords.test(label.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/([A-Z])([A-Z][a-z])/g, '$1 $2')) || element?.getAttribute('type') === 'submit';
 }
 
 export function visible(element: HTMLElement) {
@@ -44,7 +46,7 @@ export function labelFor(element: HTMLElement) {
   if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement) {
     const label = element.labels?.[0]?.textContent?.trim();
     if (label) return label;
-    if (element.placeholder) return element.placeholder.trim();
+    if ((element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) && element.placeholder) return element.placeholder.trim();
     if (element.name) return element.name.trim();
   }
   return (element.innerText || element.textContent || element.getAttribute('title') || '').replace(/\s+/g, ' ').trim();

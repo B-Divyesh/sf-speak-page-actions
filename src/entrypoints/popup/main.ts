@@ -1,14 +1,22 @@
 import './style.css';
 import './pro.css';
 import { findAction, normaliseWords, type PageAction } from '../../lib/actions';
+import { installPageAgent } from '../../lib/page-agent';
+import { browser } from 'wxt/browser';
 
-type SpeechRecognitionLike = { start(): void; stop(): void; lang: string; interimResults: boolean; continuous: boolean; onresult: ((event: any) => void) | null; onerror: ((event: any) => void) | null; onend: (() => void) | null; };
+type SpeechRecognitionLike = { start(): void; stop(): void; lang: string; interimResults: boolean; continuous: boolean; processLocally?: boolean; onresult: ((event: SpeechRecognitionEventLike) => void) | null; onerror: ((event: SpeechRecognitionErrorLike) => void) | null; onend: (() => void) | null; };
+type SpeechRecognitionEventLike = { results: { length: number; [index: number]: { [index: number]: { transcript: string } } } };
+type SpeechRecognitionErrorLike = { error: string };
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const talk = $('talk') as HTMLButtonElement, command = $('command') as HTMLInputElement, status = $('status'), list = $('action-list'), empty = $('empty'), count = $('count'), review = $('review') as HTMLDialogElement, reviewCopy = $('review-copy'), undo = $('undo') as HTMLButtonElement, aliasTarget = $('alias-target') as HTMLSelectElement, aliasName = $('alias-name') as HTMLInputElement, licenseToken = $('license-token') as HTMLInputElement, aliasStatus = $('alias-status');
 let actions: PageAction[] = [], pending: PageAction | undefined, recognition: SpeechRecognitionLike | undefined;
 
 async function activeTab() { const [tab] = await browser.tabs.query({ active: true, currentWindow: true }); if (!tab.id) throw new Error('No active page was found.'); return tab.id; }
-async function pageMessage(message: object) { return browser.tabs.sendMessage(await activeTab(), message); }
+async function pageMessage(message: object) {
+  const tabId = await activeTab();
+  await browser.scripting.executeScript({ target: { tabId }, func: installPageAgent });
+  return browser.tabs.sendMessage(tabId, message);
+}
 function setStatus(message: string) { status.textContent = message; }
 function render() {
   count.textContent = String(actions.length); list.innerHTML = ''; empty.hidden = actions.length > 0;
@@ -35,10 +43,14 @@ async function saveAlias() {
 function makeRecognition() {
   const Constructor = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
   if (!Constructor) { setStatus('Speech recognition is unavailable here. Type the command instead.'); return; }
-  recognition = new Constructor(); recognition.lang = navigator.language || 'en-US'; recognition.interimResults = false; recognition.continuous = false;
-  recognition.onresult = (event) => { command.value = event.results[event.results.length - 1][0].transcript; setStatus(`Heard “${command.value}”.`); runCommand(); };
-  recognition.onerror = (event) => { setStatus(event.error === 'not-allowed' ? 'Microphone access was denied. Allow it, or type the command.' : 'Speech was not available. Type the command instead.'); };
-  recognition.onend = () => { talk.setAttribute('aria-pressed', 'false'); talk.textContent = '● Hold to speak'; };
+  const candidate = new Constructor() as SpeechRecognitionLike;
+  if (!('processLocally' in candidate)) { setStatus('On-device speech recognition is unavailable here. Type the command instead.'); return; }
+  candidate.processLocally = true;
+  candidate.lang = navigator.language || 'en-US'; candidate.interimResults = false; candidate.continuous = false;
+  candidate.onresult = (event) => { command.value = event.results[event.results.length - 1][0].transcript; setStatus(`Heard “${command.value}”.`); void runCommand(); };
+  candidate.onerror = (event) => { setStatus(event.error === 'not-allowed' ? 'Microphone access was denied. Allow it, or type the command.' : 'On-device speech was not available. Type the command instead.'); };
+  candidate.onend = () => { talk.setAttribute('aria-pressed', 'false'); talk.textContent = '● Hold to speak'; };
+  recognition = candidate;
 }
 function startListening() { if (!recognition) makeRecognition(); if (!recognition) return; try { talk.setAttribute('aria-pressed', 'true'); talk.textContent = '● Listening… release to stop'; setStatus('Listening. Release when you finish the action label.'); recognition.start(); } catch { /* recognition already started */ } }
 function stopListening() { recognition?.stop(); }

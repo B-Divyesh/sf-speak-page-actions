@@ -9,20 +9,22 @@ Try the safe sample at [the demo route](https://speak-page-actions.sociobot.in/d
 ## Run locally
 
 ```sh
-npm install
+npm ci
 npm run dev              # Chromium extension development mode
 npm run dev:site         # static site at the shown local URL
 npm test
+npm run lint
 npm run build            # extension in dist/extension and site in dist/site
+npm run test:package     # verify the downloadable MV3 consumer archive
 ```
 
 Load the unpacked `./.output/chrome-mv3` directory from `chrome://extensions` while running `npm run dev`, or use the packaged `dist/site/downloads/speak-page-actions.zip` after a build.
 
-`npm run build:site` is the static deployment command. It writes `index.html` exactly at `dist/site/`.
+`npm run build:site` is the static deployment command. It writes the site to `dist/site/` and includes the downloadable extension at `dist/site/downloads/speak-page-actions.zip`.
 
 ## Privacy and limits
 
-The extension runs on the active page only. It does not capture background microphone audio or send page labels or spoken words to a service. Browser speech recognition availability varies by browser and operating system; typing the same command remains available. The public site works offline after its first visit. See [Privacy](https://speak-page-actions.sociobot.in/privacy) and [Terms](https://speak-page-actions.sociobot.in/terms).
+The extension scans only the active page after you open it. It does not capture background microphone audio. Spoken commands run only when the browser offers on-device processing; typing the same command remains available. The public site works offline after its first visit. See [Privacy](https://speak-page-actions.sociobot.in/privacy) and [Terms](https://speak-page-actions.sociobot.in/terms).
 
 ## License
 
