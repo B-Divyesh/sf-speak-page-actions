@@ -26,7 +26,9 @@ export function findAction(command: string, actions: PageAction[]) {
 export function isDestructive(label: string, element?: Element) {
   // Inline icon/status text can run into the visible label ("BUTTONDelete").
   // Insert a word break at lower-to-upper transitions before checking it.
-  return destructiveWords.test(label.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/([A-Z])([A-Z][a-z])/g, '$1 $2')) || element?.getAttribute('type') === 'submit';
+  const submitsForm = (typeof HTMLButtonElement !== 'undefined' && element instanceof HTMLButtonElement && element.type === 'submit' && Boolean(element.form))
+    || (typeof HTMLInputElement !== 'undefined' && element instanceof HTMLInputElement && ['submit', 'image'].includes(element.type) && Boolean(element.form));
+  return destructiveWords.test(label.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/([A-Z])([A-Z][a-z])/g, '$1 $2')) || submitsForm;
 }
 
 export function visible(element: HTMLElement) {

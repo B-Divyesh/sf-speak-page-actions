@@ -13,8 +13,8 @@
       <section class="listen" aria-labelledby="listen-title">
         <p class="eyebrow">Page-scoped voice control</p>
         <h1 id="listen-title">Say a visible action</h1>
-        <p class="hint">Hold to speak. Try “click save changes”.</p>
-        <button id="talk" class="talk" type="button" aria-label="Hold to speak" aria-pressed="false"><span aria-hidden="true">●</span> Hold to speak</button>
+        <p class="hint">Hold to speak. Hold Space or Enter with the keyboard.</p>
+        <button id="talk" class="talk" type="button" aria-label="Hold to speak. Hold Space or Enter with the keyboard." aria-pressed="false"><span aria-hidden="true">●</span> Hold to speak</button>
         <label class="command-label" for="command">Or type the command</label>
         <div class="command-row"><input id="command" autocomplete="off" placeholder="click publish" /><button id="run" type="button">Run command</button></div>
       </section>
@@ -25,7 +25,7 @@
         <ul id="action-list"></ul>
       </section>
       <button id="undo" class="undo" type="button" hidden>Undo last page action</button>
-      <details class="pro"><summary>Pro command aliases</summary><p>Save a short word for a visible action. The alias stays in this browser.</p><label for="alias-name">Alias</label><input id="alias-name" autocomplete="off" placeholder="checkout" /><label for="alias-target">Visible action</label><select id="alias-target"></select><label for="license-token">Pro license token</label><input id="license-token" autocomplete="off" /><button id="save-alias" type="button">Save alias</button><p id="alias-status" role="status" aria-live="polite"></p></details>
+      <details class="pro"><summary>Save your own command names (Pro)</summary><p>Save a short name for a visible control. The name stays in this browser.</p><label for="alias-name">Your command name</label><input id="alias-name" autocomplete="off" placeholder="checkout" /><label for="alias-target">Visible control</label><select id="alias-target"></select><label for="license-token">Pro license token</label><input id="license-token" autocomplete="off" /><button id="save-alias" type="button">Save command name</button><p id="alias-status" role="status" aria-live="polite"></p></details>
       <dialog id="review" aria-labelledby="review-title">
         <p class="eyebrow">Review before action</p>
         <h2 id="review-title">Use this action?</h2>

@@ -10,7 +10,7 @@ type SpeechRecognitionEventLike = { results: { length: number; [index: number]: 
 type SpeechRecognitionErrorLike = { error: string };
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const talk = $('talk') as HTMLButtonElement, command = $('command') as HTMLInputElement, status = $('status'), list = $('action-list'), empty = $('empty'), count = $('count'), review = $('review') as HTMLDialogElement, reviewCopy = $('review-copy'), undo = $('undo') as HTMLButtonElement, aliasTarget = $('alias-target') as HTMLSelectElement, aliasName = $('alias-name') as HTMLInputElement, licenseToken = $('license-token') as HTMLInputElement, aliasStatus = $('alias-status');
-let actions: PageAction[] = [], pending: PageAction | undefined, recognition: SpeechRecognitionLike | undefined;
+let actions: PageAction[] = [], pending: PageAction | undefined, recognition: SpeechRecognitionLike | undefined, listening = false, ignoreTalkClick = false;
 
 async function activeTab() { const [tab] = await browser.tabs.query({ active: true, currentWindow: true }); if (!tab.id) throw new Error('No active page was found.'); return tab.id; }
 async function pageMessage(message: object) {
@@ -26,7 +26,7 @@ function render() {
 }
 function escapeHtml(value: string) { const node = document.createElement('span'); node.textContent = value; return node.innerHTML; }
 async function scan() { setStatus('Scanning visible actions…'); try { const result = await pageMessage({ type: 'SPA_COLLECT' }); actions = result.actions; render(); setStatus(actions.length ? `${actions.length} visible actions on ${result.title || 'this page'}.` : 'No labelled actions were found.'); } catch { actions=[]; render(); setStatus('This page cannot be scanned. Open a normal web page and try again.'); } }
-async function activate(action: PageAction) { try { const result = await pageMessage({ type: 'SPA_ACTIVATE', id: action.id }); setStatus(result.message); undo.hidden = !result.canUndo; if (result.ok) await scan(); } catch { setStatus('The page changed before that action could run. Scan the page again.'); } }
+async function activate(action: PageAction, confirmed = false) { try { const result = await pageMessage({ type: 'SPA_ACTIVATE', id: action.id, confirmed }); if (result.needsReview) { pending = action; reviewCopy.textContent = `“${action.label}” may change or send something on this page.`; review.showModal(); return; } setStatus(result.message); undo.hidden = !result.canUndo; if (result.ok) await scan(); } catch { setStatus('The page changed before that action could run. Scan the page again.'); } }
 function use(action: PageAction) { if (action.destructive) { pending = action; reviewCopy.textContent = `“${action.label}” may change or send something on this page.`; review.showModal(); } else activate(action); }
 async function runCommand() { const aliases = (await browser.storage.local.get('spa:aliases'))['spa:aliases'] as Record<string, string> | undefined; const savedTarget = aliases?.[normaliseWords(command.value)]; const action = savedTarget ? findAction(savedTarget, actions) : findAction(command.value, actions); if (!action) { setStatus('No visible action matched those words. Say or type the label shown below.'); return; } use(action); }
 async function licenseIsActive(token: string) {
@@ -50,12 +50,12 @@ function makeRecognition() {
   candidate.lang = navigator.language || 'en-US'; candidate.interimResults = false; candidate.continuous = false;
   candidate.onresult = (event) => { command.value = event.results[event.results.length - 1][0].transcript; setStatus(`Heard “${command.value}”.`); void runCommand(); };
   candidate.onerror = (event) => { setStatus(event.error === 'not-allowed' ? 'Microphone access was denied. Allow it, or type the command.' : 'On-device speech was not available. Type the command instead.'); };
-  candidate.onend = () => { talk.setAttribute('aria-pressed', 'false'); talk.textContent = '● Hold to speak'; };
+  candidate.onend = () => { listening = false; talk.setAttribute('aria-pressed', 'false'); talk.textContent = '● Hold to speak'; talk.setAttribute('aria-label', 'Hold to speak. Hold Space or Enter with the keyboard.'); };
   recognition = candidate;
 }
-function startListening() { if (!recognition) makeRecognition(); if (!recognition) return; try { talk.setAttribute('aria-pressed', 'true'); talk.textContent = '● Listening… release to stop'; setStatus('Listening. Release when you finish the action label.'); recognition.start(); } catch { /* recognition already started */ } }
-function stopListening() { recognition?.stop(); }
+function startListening() { if (listening) return; if (!recognition) makeRecognition(); if (!recognition) return; try { listening = true; talk.setAttribute('aria-pressed', 'true'); talk.textContent = '● Listening… release to stop'; talk.setAttribute('aria-label', 'Listening. Release to stop.'); setStatus('Listening. Release when you finish the action label.'); recognition.start(); } catch { listening = false; /* recognition already started */ } }
+function stopListening() { if (!listening) return; recognition?.stop(); }
 $('scan').addEventListener('click', scan); $('run').addEventListener('click', runCommand); command.addEventListener('keydown', (e) => { if (e.key === 'Enter') runCommand(); });
-talk.addEventListener('pointerdown', startListening); talk.addEventListener('pointerup', stopListening); talk.addEventListener('pointerleave', stopListening); talk.addEventListener('keydown', (e) => { if (e.key === ' ') { e.preventDefault(); startListening(); }}); talk.addEventListener('keyup', (e) => { if (e.key === ' ') stopListening(); });
-$('cancel').addEventListener('click', () => review.close()); $('confirm').addEventListener('click', () => { review.close(); if (pending) activate(pending); pending = undefined; }); undo.addEventListener('click', async () => { const result = await pageMessage({ type: 'SPA_UNDO' }); setStatus(result.message); undo.hidden = true; await scan(); }); $('save-alias').addEventListener('click', saveAlias);
+talk.addEventListener('pointerdown', () => { ignoreTalkClick = true; startListening(); }); talk.addEventListener('pointerup', stopListening); talk.addEventListener('pointercancel', stopListening); talk.addEventListener('pointerleave', stopListening); talk.addEventListener('click', () => { if (ignoreTalkClick) { ignoreTalkClick = false; return; } }); talk.addEventListener('keydown', (e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); startListening(); }}); talk.addEventListener('keyup', (e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); stopListening(); }});
+$('cancel').addEventListener('click', () => review.close()); $('confirm').addEventListener('click', () => { review.close(); if (pending) activate(pending, true); pending = undefined; }); undo.addEventListener('click', async () => { const result = await pageMessage({ type: 'SPA_UNDO' }); setStatus(result.message); undo.hidden = true; await scan(); }); $('save-alias').addEventListener('click', saveAlias);
 scan();

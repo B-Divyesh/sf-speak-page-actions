@@ -10,6 +10,9 @@ if (manifest.manifest_version !== 3 || manifest.name !== 'Speak Page Actions') t
 if (manifest.content_scripts?.length) throw new Error('The package must not inject a content script on every page.');
 if (manifest.host_permissions?.some((permission) => permission === '<all_urls>')) throw new Error('The package must not request all-site host permission.');
 if (!readFileSync(archive)) throw new Error('The download archive is empty.');
+const appleTouchIcon = readFileSync('dist/site/icons/apple-touch-icon.png');
+if (appleTouchIcon.readUInt32BE(16) !== 180 || appleTouchIcon.readUInt32BE(20) !== 180) throw new Error('The Apple touch icon must be a 180px PNG.');
+if (!readFileSync('dist/site/index.html', 'utf8').includes('apple-touch-icon.png')) throw new Error('The landing page must link the Apple touch icon.');
 const staticConfig = JSON.parse(readFileSync('dist/site/staticwebapp.config.json', 'utf8'));
 const csp = staticConfig.globalHeaders?.['Content-Security-Policy'] || '';
 if (!/(^|;)\s*frame-ancestors 'none'\s*(;|$)/.test(csp)) throw new Error("The response-header CSP must include frame-ancestors 'none'.");

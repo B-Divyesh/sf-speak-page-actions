@@ -1,49 +1,60 @@
-# Adversarial first-read review 1 handoff — FAIL
+# Polish 1 handoff
 
-Reviewed candidate `c220b7a8f027a5ab8117fa9f058bdb31ceb602e5`
-against <https://speak-page-actions.sociobot.in> on 2026-08-29. No product code
-was modified. The full evidence and required fixes are in
-`.factory/review-1.md`.
+## What changed
 
-## What was done
+This repair closes all 23 findings from adversarial review 1 and rechecks the
+earlier verification records. The extension now blocks form-owned implicit,
+explicit, and image submits until review confirmation; keyboard push-to-talk
+works with pointer, Space, and Enter holds; Pro and free claim tests exercise
+the packaged MV3 extension storage and page-agent behavior; and privacy claims
+are individually declared and tested.
 
-- Recorded cold first reads at 390×844 and 1440×900 before scrolling.
-- Audited every landing/README sentence plus headings, labels, buttons, alt
-  text, dynamic license states, and command comments with word counts.
-- Exercised the live one-click demo, normal/destructive commands, reset, exit,
-  storage isolation, same-origin requests, and offline reload.
-- Ran all 13 exact claim commands from a separate clean clone.
-- Checked the packaged page agent and found that an implicit HTML form-submit
-  button is classified `destructive:false`.
-- Crawled all public links, verified checkout/download status, checked route
-  titles/h1/meta/canonical/OG data, deep links, focus, back/scroll restoration,
-  the real 404, response headers, and live/candidate artifact identity.
-- Ran Axe and target-size checks at 390 and 1440 in light and dark.
-- Read the prior handoff; there were no earlier review or polish files.
-- Checked missed AI/import/export/sync leverage and found none beyond the
-  broken demo-to-install continuation recorded in the review.
+The static site now has plain first-screen wording, a direct `?demo=1` route,
+an isolated demo banner with reset and real-start continuation, phone-first
+sample controls, route-specific social metadata, a 180px Apple touch icon,
+and refreshed legal/copy audit documentation. The dithered instruction-card
+visual system is preserved. WXT is updated to 0.21.4 and `npm audit` is clean.
 
-## Verification
+## Run and verify
 
-- 13/13 declared claim commands passed.
-- `npm test`: PASS (5 Vitest, 22 Playwright).
-- `npm run lint`: PASS.
-- `npm run build`: PASS.
-- `npm run test:package`: PASS.
-- `/opt/fleet/lib/verify-url.sh`: PASS after creating its output directory.
-- Live Axe: zero violations on Home, Demo, Privacy, and Terms at both tested
-  viewports and color schemes.
-- Live demo request log: same-origin only; offline reload passed.
-- Live JS/CSS hashes and extracted extension package files match the clean
-  candidate build.
-- `npm audit`: 10 development-tool advisories (1 low, 2 moderate, 4 high,
-  3 critical).
+```sh
+npm ci
+npm run typecheck
+npm test
+npm run build
+npm run test:package
+```
 
-## Disposition and next steps
+The static deployment artifact is `dist/site/`; its downloadable MV3 ZIP is
+`dist/site/downloads/speak-page-actions.zip`. Demo entry points are `/demo`
+and `/?demo=1`.
 
-**FAIL: 23 findings (6 blocking, 6 major, 11 minor).** Repair all findings in
-`.factory/review-1.md`, add behavior-level extension tests for safety,
-keyboard, paid aliases, and free core actions, deploy the repaired candidate,
-then rerun the entire adversarial checklist from scratch. Do not treat the
-passing declared commands as acceptance; two claim tests do not exercise the
-extension outcomes they advertise.
+## Exact local evidence
+
+- Clean dependency install: `npm ci`.
+- Full test suite: `npm test` — 5 Vitest unit tests and 26 Playwright browser
+  tests passed.
+- All 15 exact commands in `.factory/claims.json` were run individually after
+  the clean install and passed.
+- `npm run typecheck`, `npm run build`, and `npm run test:package` passed.
+- `npm audit --json` reports 0 low, moderate, high, or critical findings.
+- Local static `verify-url.sh` passed at `http://127.0.0.1:4173`: 200, 541ms,
+  one h1, main, title/lang/alt/button checks, and no console errors. Evidence:
+  `test-results/verify-local/verify.json`.
+- Playwright Axe checks report zero serious/critical issues on home, demo,
+  Privacy, Terms, and 404 at phone size and in dark mode.
+- Lighthouse static preview: Performance 100 and Accessibility 100. Evidence:
+  `test-results/lighthouse-local.json`.
+- Phone evidence: `test-results/polish-1-home-390.png` and
+  `test-results/polish-1-demo-390.png`.
+
+## Deployment and live recheck
+
+Commit and deployment details, plus cold live URL verification, are appended
+after the work-order push completes.
+
+## Known gaps
+
+None. The extension still honestly cannot undo server-side actions or actions
+after page navigation; this is stated in Terms and is not advertised as an
+undo capability.
