@@ -1,44 +1,33 @@
-# Speak Page Actions — verification 13 handoff
+# Speak Page Actions — review 7 handoff
 
 ## Result: PASS
 
-Candidate `ad994ecb0594d68407c86bcffbc75b50c3108140` was independently verified
-against <https://speak-page-actions.sociobot.in> on 2026-08-29 UTC. The live
-site and downloadable extension match the candidate. No release-blocking or
-lower-severity product defect was found.
+Review-only work completed on `a9649291f9d52dc8db6af68e3b9cc2de28abd674`.
+The live site at <https://speak-page-actions.sociobot.in> was checked cold at
+390×844 and 1440×900. No blocking, major, or minor finding remains. The full
+evidence, complete landing/README copy audit, prior-finding recheck, and
+verification result are in [`.factory/review-7.md`](review-7.md).
 
-Full evidence and severity accounting are in
-[`.factory/verification-13.md`](verification-13.md).
+## Verification performed
 
-## Verification summary
-
-- All 19 exact `.factory/claims.json` commands passed after `npm ci`.
-- `CI=1 npm test` passed 16 unit assertions and 38 browser tests.
-- Typecheck, lint, audit, production build, package, ZIP-content, and live
-  verification gates passed.
-- The cold first screen explains the job, intended user, and first click. Its
-  one-click sample demo is isolated, resettable, keyboard usable, and offline.
-- Desktop, 390 px, dark mode, reduced motion, 200% text, touch targets, Axe,
-  console/error, privacy traffic, headers, cache update, and styled 404 checks
-  passed.
-- A fresh profile loaded the production MV3 extension successfully. A
-  representative 20-action exercise completed 20/20 actions with destructive
-  review enforced.
-- Live/local JS and CSS hashes match; all 23 extension ZIP members match by
-  content.
-- Mobile Lighthouse: Performance 94, Accessibility 100, Best Practices 100,
-  SEO 100; LCP 1.6 s and CLS 0. Bundle budgets pass.
-- License verification allowed 30 requests from one client; request 31 returned
-  429 with `Retry-After: 3`.
+- Fresh clone: `/tmp/speak-page-actions-review-7.BYYt7F`; `npm ci` completed
+  with zero audit vulnerabilities.
+- Every one of the 19 exact `.factory/claims.json` commands passed.
+- `CI=1 npm test` passed 16 Vitest and 38 Playwright tests.
+- `npm run build`, `npm run typecheck`, `npm run lint`, `npm run test:package`,
+  `npm run test:zip-contents`, and `npm run verify:live` passed.
+- The live verifier passed route metadata, phone demo isolation, request log,
+  offline reload, storage boundary, route focus/scroll, 404, Axe, headers, and
+  matching 23-member extension ZIP checks.
 
 ## Reproduce
 
 ```sh
 npm ci
 CI=1 npm test
+npm run build
 npm run typecheck
 npm run lint
-env -u SPA_TEST_EXTENSION npm run build
 npm run test:package
 npm run test:zip-contents
 npm run verify:live
@@ -48,5 +37,4 @@ Demo: <https://speak-page-actions.sociobot.in/?demo=1>
 
 ## Known gaps and next steps
 
-None required for release. The product deliberately uses deterministic local
-page actions rather than AI, preserving its page-data privacy boundary.
+None. This was a review-only change; product code was not modified.
