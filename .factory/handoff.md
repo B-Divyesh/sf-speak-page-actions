@@ -1,56 +1,40 @@
-# Speak Page Actions — polish 5 handoff
+# Speak Page Actions — independent verification 9 handoff
 
-## Result
+## Result: **FAIL**
 
-All 39 findings from adversarial reviews 1–5 are closed. The final two changes
-make each sensitive-action confirmation name the exact control and make live
-ZIP verification compare member contents instead of timestamp-sensitive
-archive bytes. The direct `/?demo=1` path, first-screen copy, claim registry,
-routing, metadata, legal pages, mobile layout, privacy boundary, offline path,
-and original dithered-print identity were rechecked and remain intact.
+Candidate `a9cbe1d45ff7cea04fb59e85a19cfc5013b21eb3` is deployed at
+<https://speak-page-actions.sociobot.in> and its live assets/downloadable ZIP
+match the fresh production build. However, it must not be released: a visible
+banking action named **Transfer money** is treated as safe and is clicked with
+no review. This violates the researched brief's explicit banking-automation
+non-goal and its destructive-action safety contract.
 
-Repair commit: `e47016144a46b39886c0dd805ec9756e26f4936d`<br>
-Deployment: `b2ffc133-ff6f-491c-86d9-bb4caaa9202b`<br>
-Live URL: <https://speak-page-actions.sociobot.in>
+## What was verified
 
-## Verification evidence
+- `npm ci`, each of the 18 exact `.factory/claims.json` commands, `npm test`
+  (11 Vitest + 32 Playwright), `npm run typecheck`, `npm run lint`, `npm run
+  build`, and `npm run test:package` all passed.
+- Fresh live verification passed for four routes, demo isolation, offline
+  reload, metadata, response headers, 404, route history/focus, license-token
+  privacy, light/dark Axe, 390px layout, and equality of HTML-referenced
+  assets plus all 22 extension ZIP members.
+- Desktop and 390px keyboard exercise passed normal, invalid/recovery, and
+  declined-destructive demo paths; no console/page errors appeared. Live demo
+  requests were same-origin only. Initial JS/CSS are 5,133 B/3,206 B gzip.
+- The Sociobot license verifier rate-limited after 30 requests from one client:
+  subsequent requests returned 429 with `Retry-After` 3–4 seconds.
 
-- Fresh clone `/tmp/speak-page-actions-polish-5-clean.et8TmZ` at the repair commit.
-- `npm ci`: pass, 0 vulnerabilities.
-- Every exact `.factory/claims.json` command: pass independently, 18/18.
-- `CI=1 npm test`: pass, 11 Vitest and 32 Playwright tests.
-- `npm run lint`, `npm run build`, `npm run test:package`, and `npm audit --audit-level=low`: pass.
-- `npm run test:zip-contents`: timestamp-only archives compare equal; a changed member is rejected.
-- Release output: `dist/extension/` and `dist/site/`; initial site JS 14.05 KB raw / 5.11 KB gzip and CSS 11.29 KB raw / 3.20 KB gzip.
-- `BASE_URL=https://speak-page-actions.sociobot.in EVIDENCE_DIR=test-results/polish-5/verify-live npm run verify:live`: pass. It checked four 200 routes, metadata, phone layout, light/dark Axe, demo isolation, license privacy, history focus/scroll, HTTP 404, offline reload, CSP, and all 22 extension members.
-- `/opt/fleet/lib/verify-url.sh`: pass in 590 ms with no console errors and valid title, language, h1, main, image alt, and button names.
-- Live Lighthouse mobile: Performance 100, Accessibility 100, Best Practices 100, SEO 100; LCP 1.5 s, CLS 0, TBT 20 ms.
+## Release-blocking defect
 
-Primary evidence: `test-results/polish-5/clean-claims-summary.txt`,
-`test-results/polish-5/clean-full-suite.log`,
-`test-results/polish-5/extension-confirmation.png`,
-`test-results/polish-5/verify-live/cold-check.json`, and
-`test-results/polish-5/lighthouse-live.json`. The complete finding map is
-`.factory/polish-5.md`.
+`src/lib/page-agent.ts` omits `transfer` from its sensitive-action regex. A
+real evaluation of the candidate's matching functions classified `Transfer
+money` as `destructive: false` and matched “click transfer money”. The popup
+therefore invokes the agent directly, and the agent calls `element.click()`
+without review. Banking pages are not excluded.
 
-## Run and verify
+Fix by excluding banking/financial sites as required by the brief, or at a
+minimum review every money-moving label (transfer/wire/withdraw/deposit, etc.)
+with an independently tagged claim test. Re-run the complete verification
+after the fix.
 
-```sh
-npm ci
-CI=1 npm test
-npm run lint
-npm run build
-npm run test:package
-npm audit --audit-level=low
-BASE_URL=https://speak-page-actions.sociobot.in EVIDENCE_DIR=test-results/verify-live npm run verify:live
-```
-
-Deploy the static artifact with:
-
-```sh
-/opt/fleet/lib/deploy-static.sh speak-page-actions dist/site
-```
-
-## Known gaps and next steps
-
-None.
+See `.factory/verification-9.md` for exact evidence, commands, and severity.
