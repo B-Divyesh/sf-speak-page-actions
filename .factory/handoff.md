@@ -1,4 +1,23 @@
-# Speak Page Actions — polish 4 handoff
+# Speak Page Actions — verification 8 handoff
+
+## Independent release verdict
+
+**PASS** for candidate `3ca8320cd001f2bfe04dee4ed03cd0c67450d8c3` at
+<https://speak-page-actions.sociobot.in>, independently verified on
+2026-08-29 UTC. The deployed JS/CSS and every extracted member of the
+downloadable extension ZIP match a fresh production build of this candidate.
+
+All 18 required `.factory/claims.json` commands passed individually from a
+clean install; `npm test` (5 unit + 32 Playwright), typecheck, lint, production
+build, and consumer-package verification passed. Live desktop/390px exercise,
+offline demo reload, keyboard/focus, reduced motion, request logging, headers,
+and light/dark Axe checks passed. The observed verification rate allowance is
+30 invalid requests before HTTP 429 with `Retry-After: 2`.
+
+No critical, high, medium, or low release defects were found. Full evidence is
+in `.factory/verification-8.md`.
+
+---
 
 ## Status
 
