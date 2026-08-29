@@ -13,6 +13,10 @@ describe('spoken command matching', () => {
     'marks account-ending action “%s” for review',
     (label) => expect(isDestructive(label)).toBe(true),
   );
+  it.each(['Transfer money', 'Wire funds', 'Withdraw cash', 'Deposit check', 'Add payee'])(
+    'marks money-moving action “%s” for review as a defense in depth',
+    (label) => expect(isDestructive(label)).toBe(true),
+  );
   it('marks a destructive label when inline page text runs together', () => expect(isDestructive('BUTTONDelete saved draft review')).toBe(true));
   it('keeps words stable', () => expect(normaliseWords('Review  order')).toBe('review order'));
 });

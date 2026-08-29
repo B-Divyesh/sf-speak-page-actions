@@ -11,7 +11,8 @@ type SpeechRecognitionErrorLike = { error: string };
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const talk = $('talk') as HTMLButtonElement, command = $('command') as HTMLInputElement, status = $('status'), list = $('action-list'), empty = $('empty'), count = $('count'), review = $('review') as HTMLDialogElement, reviewCopy = $('review-copy'), confirmAction = $('confirm') as HTMLButtonElement, undo = $('undo') as HTMLButtonElement, aliasTarget = $('alias-target') as HTMLSelectElement, aliasName = $('alias-name') as HTMLInputElement, licenseToken = $('license-token') as HTMLInputElement, licenseStatus = $('license-status'), aliasStatus = $('alias-status');
 const defaultConfirmLabel = 'Confirm action';
-let actions: PageAction[] = [], pending: PageAction | undefined, recognition: SpeechRecognitionLike | undefined, listening = false, ignoreTalkClick = false;
+const financialPageMessage = 'Speak Page Actions does not operate banking or financial pages.';
+let actions: PageAction[] = [], pending: PageAction | undefined, recognition: SpeechRecognitionLike | undefined, listening = false, ignoreTalkClick = false, pageBlocked = false;
 
 async function activeTab() {
   const active = await browser.tabs.query({ active: true, currentWindow: true });
@@ -29,12 +30,12 @@ async function pageMessage(message: object) {
 }
 function setStatus(message: string) { status.textContent = message; }
 function render() {
-  count.textContent = String(actions.length); list.innerHTML = ''; empty.hidden = actions.length > 0;
+  count.textContent = String(actions.length); list.innerHTML = ''; empty.hidden = actions.length > 0 || pageBlocked;
   aliasTarget.innerHTML = actions.map((action) => `<option value="${escapeHtml(action.label)}">${escapeHtml(action.label)}</option>`).join('');
   for (const action of actions) { const li = document.createElement('li'), button = document.createElement('button'); button.className = 'action'; button.type = 'button'; button.innerHTML = `<span>${escapeHtml(action.label)} ${action.destructive ? '<span class="risk">review</span>' : ''}</span><span class="kind">${action.kind}</span>`; button.addEventListener('click', () => use(action)); li.append(button); list.append(li); }
 }
 function escapeHtml(value: string) { const node = document.createElement('span'); node.textContent = value; return node.innerHTML; }
-async function scan() { setStatus('Scanning visible actions…'); try { const result = await pageMessage({ type: 'SPA_COLLECT' }); actions = result.actions; render(); setStatus(actions.length ? `${actions.length} visible actions on ${result.title || 'this page'}.` : 'No labelled actions were found.'); } catch { actions=[]; render(); setStatus('This page cannot be scanned. Open a normal web page and try again.'); } }
+async function scan() { setStatus('Scanning visible actions…'); try { const result = await pageMessage({ type: 'SPA_COLLECT' }); pageBlocked = result.blocked === true; actions = result.actions; render(); setStatus(pageBlocked ? result.message || financialPageMessage : actions.length ? `${actions.length} visible actions on ${result.title || 'this page'}.` : 'No labelled actions were found.'); } catch { pageBlocked = false; actions=[]; render(); setStatus('This page cannot be scanned. Open a normal web page and try again.'); } }
 function openReview(action: PageAction) {
   pending = action;
   reviewCopy.textContent = `“${action.label}” may change or send something on this page.`;
@@ -42,9 +43,10 @@ function openReview(action: PageAction) {
   review.showModal();
 }
 function resetReview() { pending = undefined; confirmAction.textContent = defaultConfirmLabel; }
-async function activate(action: PageAction, confirmed = false) { try { const result = await pageMessage({ type: 'SPA_ACTIVATE', id: action.id, confirmed }); if (result.needsReview) { openReview(action); return; } setStatus(result.message); undo.hidden = !result.canUndo; if (result.ok) await scan(); } catch { setStatus('The page changed before that action could run. Scan the page again.'); } }
+async function activate(action: PageAction, confirmed = false) { try { const result = await pageMessage({ type: 'SPA_ACTIVATE', id: action.id, confirmed }); if (result.blocked) { pageBlocked = true; actions = []; render(); setStatus(result.message || financialPageMessage); return; } if (result.needsReview) { openReview(action); return; } setStatus(result.message); undo.hidden = !result.canUndo; if (result.ok) await scan(); } catch { setStatus('The page changed before that action could run. Scan the page again.'); } }
 function use(action: PageAction) { if (action.destructive) openReview(action); else activate(action); }
 async function runCommand() {
+  if (pageBlocked) { setStatus(financialPageMessage); return; }
   const saved = await browser.storage.local.get(['spa:aliases', 'sb_license:speak-page-actions']);
   const aliases = saved['spa:aliases'] as Record<string, string> | undefined;
   const savedTarget = aliases?.[normaliseWords(command.value)];

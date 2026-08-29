@@ -14,7 +14,11 @@ export function installPageAgent() {
   // costs one explicit confirmation; a false negative can be irreversible.
   // Keep this policy mirrored in the landing page, Privacy page, README, and
   // the destructive-review claim test.
-  const destructiveWords = /\b(?:delete|remove|discard|destroy|publish|send|submit|pay|purchase|place order|sign out|unsubscribe|archive|deactivate|close(?:\s+(?:my|your|the))?\s+account|cancel(?:\s+(?:my|your|the))?\s+(?:subscription|plan|membership)|end(?:\s+(?:my|your|the))?\s+(?:subscription|plan|membership)|terminate(?:\s+(?:my|your|the))?\s+account)\b/i;
+  const destructiveWords = /\b(?:delete|remove|discard|destroy|publish|send|submit|pay|purchase|place order|sign out|unsubscribe|archive|deactivate|close(?:\s+(?:my|your|the))?\s+account|cancel(?:\s+(?:my|your|the))?\s+(?:subscription|plan|membership)|end(?:\s+(?:my|your|the))?\s+(?:subscription|plan|membership)|terminate(?:\s+(?:my|your|the))?\s+account|transfer|wire|withdraw(?:al)?|deposit|cash out|send money|move money|pay bill|add payee|beneficiary)\b/i;
+  const financialContextWords = /\b(?:bank(?:ing)?|credit union|financial(?:\s+services)?|checking|savings|credit card|debit card|bank account|account balance|routing number|account number|investment(?:s)?|brokerage|trading account|loan|mortgage|insurance policy|wallet|cryptocurrency|crypto)\b/i;
+  const financialHost = /(?:^|[.-])(?:bank|banking|creditunion|credit-union|financial|finance|finserv|brokerage|invest|trading|payments?|wallet)(?:[.-]|$)/i;
+  const financialActionWords = /\b(?:transfer|wire|withdraw(?:al)?|deposit|cash out|send money|move money|pay bill|add payee|beneficiary)\b/i;
+  const financialPageMessage = 'Speak Page Actions does not operate banking or financial pages.';
   let undo: (() => boolean) | undefined;
 
   const labelFor = (element: HTMLElement) => {
@@ -41,6 +45,23 @@ export function installPageAgent() {
   const separatedWords = (label: string) => label
     .replace(/([a-z])([A-Z])/g, '$1 $2')
     .replace(/([A-Z])([A-Z][a-z])/g, '$1 $2');
+  // Banking automation is deliberately outside this product's job. A host
+  // signal catches clear financial domains; page headings and money-moving
+  // controls cover branded domains whose name alone is not descriptive. This
+  // check runs again immediately before activation so a stale action cannot
+  // bypass the policy after a page changes.
+  const isFinancialPage = () => {
+    if (financialHost.test(location.hostname)) return true;
+    const controls = [...document.querySelectorAll<HTMLElement>(selector)]
+      .filter(isVisible)
+      .map(labelFor);
+    if (controls.some((label) => financialActionWords.test(separatedWords(label)))) return true;
+    const headings = [...document.querySelectorAll<HTMLElement>('h1,h2,h3,[role="heading"]')]
+      .filter(isVisible)
+      .map((heading) => heading.innerText || heading.textContent || '');
+    const description = document.querySelector('meta[name="description"]')?.getAttribute('content') || '';
+    return financialContextWords.test(separatedWords([document.title, description, ...headings, ...controls].join(' ')));
+  };
   const submitsForm = (element: HTMLElement) =>
     (element instanceof HTMLButtonElement && element.type === 'submit' && Boolean(element.form))
     || (element instanceof HTMLInputElement && ['submit', 'image'].includes(element.type) && Boolean(element.form));
@@ -96,8 +117,15 @@ export function installPageAgent() {
 
   chrome.runtime.onMessage.addListener((message: unknown) => {
     const typed = message as { type?: string; id?: string; confirmed?: boolean };
-    if (typed?.type === 'SPA_COLLECT') return Promise.resolve({ actions: collect(), title: document.title });
-    if (typed?.type === 'SPA_ACTIVATE' && typed.id) return Promise.resolve(activate(typed.id, typed.confirmed === true));
+    if (typed?.type === 'SPA_COLLECT') {
+      return Promise.resolve(isFinancialPage()
+        ? { actions: [], title: document.title, blocked: true, message: financialPageMessage }
+        : { actions: collect(), title: document.title });
+    }
+    if (typed?.type === 'SPA_ACTIVATE' && typed.id) {
+      if (isFinancialPage()) return Promise.resolve({ ok: false, blocked: true, message: financialPageMessage });
+      return Promise.resolve(activate(typed.id, typed.confirmed === true));
+    }
     if (typed?.type === 'SPA_UNDO') {
       if (!undo) return Promise.resolve({ ok: false, message: 'There is no page action that can be undone.' });
       const restored = undo();

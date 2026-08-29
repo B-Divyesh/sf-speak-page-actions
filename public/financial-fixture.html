@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Riverbank online banking</title></head>
+  <body>
+    <main>
+      <h1>Bank account transfer</h1>
+      <button id="transfer">Transfer money</button>
+      <p id="result" role="status"></p>
+    </main>
+    <script>
+      document.querySelector('#transfer').addEventListener('click', () => { document.querySelector('#result').textContent = 'Transfer started.'; });
+    </script>
+  </body>
+</html>

@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { installPageAgent } from '../src/lib/page-agent';
 import { findAction } from '../src/lib/actions';
 
-async function extensionPopup(mockSpeech = false, unsupportedSpeech = false) {
+async function extensionPopup(mockSpeech = false, unsupportedSpeech = false, fixturePath = 'extension-fixture.html') {
   const userDataDir = mkdtempSync(`${tmpdir()}/speak-page-actions-`);
   const context = await chromium.launchPersistentContext(userDataDir, {
     channel: 'chromium', headless: true,
@@ -14,7 +14,7 @@ async function extensionPopup(mockSpeech = false, unsupportedSpeech = false) {
   const worker = context.serviceWorkers()[0] || await context.waitForEvent('serviceworker');
   const extensionId = new URL(worker.url()).hostname;
   const fixture = await context.newPage();
-  await fixture.goto('http://127.0.0.1:4173/extension-fixture.html');
+  await fixture.goto(`http://127.0.0.1:4173/${fixturePath}`);
   const popup = await context.newPage();
   if (mockSpeech) await popup.addInitScript(() => {
     class MockRecognition {
@@ -29,8 +29,8 @@ async function extensionPopup(mockSpeech = false, unsupportedSpeech = false) {
     (window as any).SpeechRecognition = class { start() {} stop() {} };
   });
   await popup.goto(`chrome-extension://${extensionId}/popup.html`);
-  await expect(popup.locator('#status')).toContainText('visible actions on');
-  await expect(popup.getByRole('button', { name: /Save address/ })).toBeVisible();
+  await expect(popup.locator('#status')).not.toContainText('Scanning visible actions');
+  if (fixturePath === 'extension-fixture.html') await expect(popup.getByRole('button', { name: /Save address/ })).toBeVisible();
   return { context, popup, fixture };
 }
 
@@ -238,6 +238,30 @@ test('@claim:destructive-review requires review before every documented sensitiv
       await expect(popup.getByRole('dialog')).toBeHidden();
       await expect(confirm).toHaveText('Confirm action');
     }
+  } finally { await context.close(); }
+});
+
+test('@claim:financial-page-exclusion does not list or operate banking and financial page controls', async ({ page }) => {
+  await page.setContent('<main><h1>Bank account transfer</h1><button data-spa-id="transfer-money">Transfer money</button><p id="result"></p></main>');
+  await page.evaluate(() => {
+    (window as any).__transferCount = 0;
+    document.querySelector('button')?.addEventListener('click', () => (window as any).__transferCount += 1);
+  });
+  await installAgent(page);
+  const collected = await page.evaluate(() => (window as typeof window & { sendSpaMessage: (message: unknown) => Promise<{ actions: unknown[]; blocked?: boolean; message?: string }> }).sendSpaMessage({ type: 'SPA_COLLECT' }));
+  expect(collected).toMatchObject({ actions: [], blocked: true, message: 'Speak Page Actions does not operate banking or financial pages.' });
+  const blocked = await page.evaluate(() => (window as typeof window & { sendSpaMessage: (message: unknown) => Promise<{ ok: boolean; blocked?: boolean; message?: string }> }).sendSpaMessage({ type: 'SPA_ACTIVATE', id: 'transfer-money', confirmed: true }));
+  expect(blocked).toMatchObject({ ok: false, blocked: true, message: 'Speak Page Actions does not operate banking or financial pages.' });
+  expect(await page.evaluate(() => (window as any).__transferCount)).toBe(0);
+
+  const { context, popup, fixture } = await extensionPopup(false, false, 'financial-fixture.html');
+  try {
+    await expect(popup.locator('#status')).toHaveText('Speak Page Actions does not operate banking or financial pages.');
+    await expect(popup.locator('#action-list button')).toHaveCount(0);
+    await popup.locator('#command').fill('click transfer money');
+    await popup.getByRole('button', { name: 'Run command' }).click();
+    await expect(popup.locator('#status')).toHaveText('Speak Page Actions does not operate banking or financial pages.');
+    await expect(fixture.locator('#result')).toHaveText('');
   } finally { await context.close(); }
 });
 

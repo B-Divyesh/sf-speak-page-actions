@@ -6,7 +6,7 @@ export type PageAction = {
   selector?: string;
 };
 
-const destructiveWords = /\b(?:delete|remove|discard|destroy|publish|send|submit|pay|purchase|place order|sign out|unsubscribe|archive|deactivate|close(?:\s+(?:my|your|the))?\s+account|cancel(?:\s+(?:my|your|the))?\s+(?:subscription|plan|membership)|end(?:\s+(?:my|your|the))?\s+(?:subscription|plan|membership)|terminate(?:\s+(?:my|your|the))?\s+account)\b/i;
+const destructiveWords = /\b(?:delete|remove|discard|destroy|publish|send|submit|pay|purchase|place order|sign out|unsubscribe|archive|deactivate|close(?:\s+(?:my|your|the))?\s+account|cancel(?:\s+(?:my|your|the))?\s+(?:subscription|plan|membership)|end(?:\s+(?:my|your|the))?\s+(?:subscription|plan|membership)|terminate(?:\s+(?:my|your|the))?\s+account|transfer|wire|withdraw(?:al)?|deposit|cash out|send money|move money|pay bill|add payee|beneficiary)\b/i;
 
 export function normaliseWords(value: string) {
   return value.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/([A-Z])([A-Z][a-z])/g, '$1 $2').toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();

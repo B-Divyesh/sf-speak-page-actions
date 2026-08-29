@@ -51,6 +51,7 @@ README string to appear in this file.
 | What it does not do | 5 | h2 |
 | It does not listen in the background. | 7 | limit |
 | It never lists password fields. | 5 | `password-exclusion` |
+| It does not operate banking or financial pages. | 8 | `financial-page-exclusion` |
 | Install on desktop Chrome or Chromium | 6 | h2 |
 | Mobile browsers cannot install this extension. | 6 | `desktop-chromium-only` |
 | You can still use the demo on this device. | 9 | `desktop-chromium-only` |
@@ -104,6 +105,8 @@ README string to appear in this file.
 | What the extension sends | 4 | privacy h2 |
 | Sensitive action review | 3 | privacy h2 |
 | Review is required for submitting, deleting, publishing, sending, paying, canceling subscriptions, unsubscribing, archiving, deactivating, closing accounts, and signing out. | 19 | `destructive-review` |
+| Financial pages | 2 | privacy h2 |
+| The extension does not operate banking or financial pages. | 9 | `financial-page-exclusion` |
 | Demo data | 2 | privacy h2 |
 | Its sample changes use separate browser storage. | 7 | `demo-isolation` |
 | Using the extension | 3 | terms h2 |
@@ -184,6 +187,7 @@ README string to appear in this file.
 | Pro is a one-time $12 license for saved command names. | 10 | `pro-aliases` |
 | Browser pages change often. | 4 | terms |
 | The extension may not identify every control or undo actions after a page navigates. | 14 | terms |
+| Speak Page Actions does not operate banking or financial pages. | 10 | extension financial-page status |
 | Speak visible browser controls on an ordinary page. | 8 | README |
 | It is for people with limited vision or hand mobility who want to say or type a control name. | 19 | README |
 | The extension scans only the current page after you open it. | 11 | README, `active-tab-only` |
@@ -191,6 +195,7 @@ README string to appear in this file.
 | Hold Space or Enter to speak; release the key to stop. | 11 | README |
 | It asks before submitting, deleting, publishing, sending, paying, canceling subscriptions, unsubscribing, archiving, deactivating, closing accounts, or signing out. | 18 | README, `destructive-review` |
 | Password fields are never listed. | 5 | README, `password-exclusion` |
+| It does not operate banking or financial pages. | 8 | README, `financial-page-exclusion` |
 | Try four sample controls at the one-click demo. | 8 | README |
 | Sample changes use separate browser storage and do not change extension settings. | 12 | README, `demo-isolation` |
 | Keys start with demo:spa: for verification. | 6 | README |
