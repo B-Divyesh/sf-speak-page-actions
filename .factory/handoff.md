@@ -1,56 +1,62 @@
-# Verification 5 handoff — PASS
+# Adversarial review 2 handoff — FAIL
 
-**Candidate:** `4c8ed626502a710ac8ffc286c01a4971e9f3ada0`
-**Verified URL:** <https://speak-page-actions.sociobot.in>
+**Candidate:** `23d6f893063f7deb2a1f644fd471ea6e8741a359`
+
+**Reviewed URL:** <https://speak-page-actions.sociobot.in>
+
 **Date:** 2026-08-29
 
-## Result
+## What was done
 
-**PASS.** This verification made no product-code changes. The live site and
-the fresh candidate build match: root HTML, JS, CSS, artwork, and service
-worker match by SHA-256; the live extension ZIP's extracted contents match the
-candidate byte-for-byte. Its archive timestamp metadata differs only.
+No product code was changed. `.factory/review-2.md` records a full cold phone
+and desktop review, complete landing/README copy audit, one-click demo and
+storage checks, all claim commands, prior-finding verification, route/link/
+metadata/accessibility checks, missed-leverage review, and verdict.
 
-## How to run and verify
+Result: **FAIL — 8 blocking, 1 major, and 1 minor finding.** The principal
+gaps are incomplete desktop installation guidance on a phone-facing page,
+lost scroll position after browser Back, and claim tests that bypass actual
+packaged-extension behavior or use source-string checks instead of request
+logs. Five review-1 findings are reopened as half-fixed.
+
+## How it was verified
+
+From a clean clone at `/tmp/speak-page-actions-review-2.zWFerP`:
 
 ```sh
 npm ci
-npm test
+# Every exact test command in .factory/claims.json, run separately with CI=1
+CI=1 npm test
 npm run typecheck
 npm run lint
 npm run build
 npm run test:package
+npm audit --audit-level=low
 ```
 
-The site build is `dist/site/`; the MV3 package is
-`dist/site/downloads/speak-page-actions.zip`. Use `/demo` or `/?demo=1` for
-the isolated sample.
+All 15 exact claim commands exited zero. The complete suite passed 5 Vitest
+and 26 Playwright tests; typecheck, lint, build, package check, and audit also
+passed. The live root HTML, JS, CSS, hero art, and service worker match the
+candidate by SHA-256.
 
-## Exact evidence
+Live checks used fresh 390×844 and 1440×900 Chromium contexts. The demo showed
+four controls and a seeded result on its first phone screen; normal action,
+Reset, Start for real, separate storage, same-origin demo requests, and offline
+reload were confirmed. `/opt/fleet/lib/verify-url.sh` passed and
+`npx @axe-core/cli` reported zero violations. Every public destination link
+resolved, and an unknown route returned the designed HTTP 404.
 
-- Every one of the 15 commands in `.factory/claims.json` passed individually
-  after the clean install.
-- `CI=1 npm test` passed: 5 Vitest unit tests and 26 Playwright tests.
-  Typecheck, lint, package check, and exact production build also passed.
-- Fresh live first read clearly identifies what it does, who it serves, and
-  the one-click **Try it with sample data** action.
-- At 390px the live demo passed normal action, unknown-command recovery,
-  destructive cancel/confirm, undo, and demo-storage isolation. It reloaded
-  offline after first visit with service-worker cache `speak-page-actions-v3`.
-- Fresh demo requests stayed same-origin. The only intentional extension
-  network destination is the disclosed Sociobot license verifier.
-- Axe reported zero serious/critical findings across home, demo, legal pages,
-  and 404 at 390px. Keyboard Skip link had a visible 3px focus ring.
-- Response headers include HSTS, nosniff, strict referrer policy, and CSP with
-  `frame-ancestors 'none'`; hashed JS is immutable cached.
-- The product verifier rate limit was enforced after 30 rapid requests: request
-  31 returned `429` with `Retry-After: 4`.
+## Evidence
 
-Full evidence, including all claim IDs and defects by severity, is in
-`.factory/verification-5.md`.
+- Full findings and all command results: `.factory/review-2.md`
+- Cold phone: `.factory/cold-live-phone-review-2.png`
+- Cold desktop: `.factory/cold-live-desktop-review-2.png`
+- Phone demo first screen: `.factory/live-demo-390-review-2.png`
 
 ## Known gaps and next steps
 
-No release-blocking, high, medium, or low defects found. The documented limit
-remains: server-side actions and actions after navigation cannot be undone;
-this is accurately stated in Terms.
+Resolve every finding in `.factory/review-2.md`, especially F-2-1 through
+F-2-8. Add real MV3 popup-to-page claim tests with request recording; do not
+count direct storage writes or bundle-string inspection as observable proof.
+Then deploy and rerun the complete review from fresh browser contexts. PASS
+requires zero findings and no untested claim.
