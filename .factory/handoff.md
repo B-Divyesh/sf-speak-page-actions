@@ -1,40 +1,85 @@
-# Speak Page Actions — review 3 handoff
+# Speak Page Actions — polish 3 handoff
 
 ## Status
 
-**FAIL** for `9a058e9c93fdf909cefdc01e1c40189bcddd475c`. This reviewer made no
-product-code changes. The full report is `.factory/review-3.md`.
+**PASS.** All 36 cumulative adversarial findings are closed. Repair commit
+`a8d2a7064fe08fbd0a342a3d3271637e6ba1e9b6` is pushed to `main` and deployment
+`b5a989d9-3b35-4b38-b13e-475d18b49cc0` is live at
+<https://speak-page-actions.sociobot.in>.
 
-## What was reviewed
+## What changed
 
-- Fresh live Chromium reads at 390×844 and 1440×900; live demo, reset,
-  Start-for-real, offline/privacy request boundary, route/back/focus/scroll,
-  metadata, 404, links, touch targets, and checkout/download availability.
-- Every declared claim command was run from a clean clone. All 17 passed.
-- `npm test` (5 Vitest + 30 Playwright), build, package check, lint/typecheck,
-  and low-threshold audit passed in that clone.
-- Every prior review/polish finding was reread and rechecked in code and on the
-  live site.
+- Replaced the website license form with a truthful checkout-return handoff:
+  the URL is scrubbed, the transfer region receives focus, the token can be
+  copied, and the extension performs verification and saves Pro locally.
+- Prevented returned tokens from entering site storage, Cache Storage,
+  referrers, or website network requests. The service worker no longer caches
+  navigation URLs.
+- Added a separate popup **Restore Pro** action, token-bound verdict caching,
+  saved-command revalidation, and actionable empty, invalid, and offline states.
+- Made the primary demo link use `/?demo=1`; its isolated banner, four controls,
+  seeded result, reset, Start for real path, mobile layout, and offline reload
+  are all exercised in browser tests.
+- Added the missing desktop Chrome/Chromium claim and a registry gate requiring
+  exactly one tagged browser test for every claim.
+- Preserved and reverified all earlier submit safety, keyboard speech, free-core,
+  privacy, routing, metadata, focus, 404, legal, copy, accessibility, package,
+  and responsive fixes.
+- Updated the verb-first 86-character catalog description and the enforced
+  189-row copy audit.
 
-## Remaining work
+The full finding-by-finding map is `.factory/polish-3.md`.
 
-1. Fix the blocking license-recovery boundary: the landing route stores a
-   token in website localStorage but cannot activate the extension’s separate
-   Pro storage.
-2. Correct the related Privacy storage statement and add full-flow test
-   coverage for every public license form.
-3. Add a declared claim/test for the desktop/mobile support statements.
+## Exact verification evidence
 
-## Verify after repair
+Clean clone: `/tmp/speak-page-actions-polish-3-clean.xCfMTg`.
+
+```sh
+npm ci                                      # pass; 0 vulnerabilities
+# Every test command in .factory/claims.json was run separately: 18/18 pass
+CI=1 npm test                               # pass: 5 Vitest + 32 Playwright
+npm run lint                                # pass
+npm run build                               # pass; dist/extension and dist/site
+npm run test:package                        # pass
+npm audit --audit-level=low                 # pass; 0 vulnerabilities
+```
+
+- Claim registry: 18 claims, each with exactly one tagged browser test.
+- Copy audit: 189 rows cover 183 extracted user-facing strings; no count,
+  22-word, or banned-word failures.
+- Production site JS: 13.74 kB raw / 5.03 kB gzip. CSS: 11.29 kB raw /
+  3.20 kB gzip. Hero WebP: 142.63 kB.
+- `/opt/fleet/lib/verify-url.sh` local: 547 ms, no console errors, correct
+  title/lang/h1/main/alt/button checks. Live: 680 ms with the same pass.
+- Local Lighthouse: Performance 99, Accessibility 100, Best Practices 100,
+  SEO 100; LCP 2.1 s, CLS 0, TBT 30 ms, 166 KiB transfer.
+- Live Lighthouse: 100/100/100/100; LCP 1.5 s, CLS 0, TBT 60 ms,
+  149 KiB transfer. Reports: `test-results/lighthouse-local-3.json` and
+  `test-results/lighthouse-live-3.json`.
+- Live cold replay: `test-results/verify-live-3/cold-check.json`. It verifies
+  route metadata, same-origin demo requests, reset/exit isolation, storage-free
+  license handoff and clipboard copy, Back/Forward focus and scroll, internal
+  links, Dodo checkout, HTTP 404, offline reload, response CSP, referrer policy,
+  light/dark Axe, and live/local artifact identity. Console errors: 0.
+- Screenshots: `test-results/verify-live-3/home-390.png`, `demo-390.png`,
+  `license-return-390.png`, and `404-390.png`.
+
+## Run and verify
 
 ```sh
 npm ci
 npm test
-npm run test:claims
 npm run lint
 npm run build
 npm run test:package
+BASE_URL=https://speak-page-actions.sociobot.in npm run verify:live
 ```
 
-Then repeat the live 390px `/demo` sandbox flow and the public-to-extension
-Pro recovery flow described in `.factory/review-3.md`.
+Static deployment root is `dist/site/`. The installable MV3 extension is also
+packaged at `dist/site/downloads/speak-page-actions.zip`.
+
+## Known gaps and next steps
+
+None. No AI feature is appropriate for this deterministic, privacy-sensitive
+page-control job. No review item, minor issue, unfinished task, or deferred
+acceptance work remains.
