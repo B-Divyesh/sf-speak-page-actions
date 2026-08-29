@@ -1,111 +1,117 @@
-# Speak Page Actions repair handoff
-
-## Independent verification update — FAIL
-
-Independent QA of candidate `eddeb93ca2cbf01bd4f4aeefe08bcee9da47a3fc` at
-https://speak-page-actions.sociobot.in completed on 2026-08-29. **Do not
-release this candidate unchanged.** The previous deployment failure is fixed:
-the live downloadable extension is present and the deployed JS exactly matches
-the candidate build. All 13 exact claim commands, the full test suite,
-typecheck, build, and consumer-package check pass.
-
-The release blocker is accessibility: at the required 390 px viewport, many
-interactive controls are below the mandatory 44x44 CSS-pixel touch target
-(header navigation is 20 px high; Reset demo is 31 px high; restore license is
-32 px high; and extension Scan page is styled to 32 px). This conflicts with
-the intended users’ limited hand mobility. An additional medium defect is that
-unknown URLs render a not-found view with HTTP 200 rather than a real 404.
-
-See `.factory/verification-2.md` for exact commands, results, privacy/request
-evidence, observed license API allowance (30 successful rapid requests then
-429 with `Retry-After: 3`), and remediation details.
+# Speak Page Actions repair-2 handoff
 
 ## Status
 
-Repair complete for independent-verification candidate
-`32300bafd2533146a15584fd4f551ec8b1087e79`. This handoff accompanies the
-repair commit on `main`.
+Repair complete for the verification-2 findings against candidate
+`eddeb93ca2cbf01bd4f4aeefe08bcee9da47a3fc`. The original WXT + TypeScript MV3
+extension and static-site deployment class are unchanged.
+
+## Findings reproduced
+
+Before editing, the 390px production build reproduced the verifier's exact
+undersized targets: header Demo 42x20, Download 72x20, Privacy 54x20; Reset demo
+103x31; Start for real 113x26; license restore 198x32; footer Privacy 51x21 and
+Terms 41x21. The packaged popup reproduced Scan page at 88x32, its skip link at
+134x35, Pro summary at 358x19, and Pro inputs/select at 358x40.
+
+The candidate also reproduced the routing defect: its broad navigation fallback
+served the client not-found view with HTTP 200 for an unknown URL.
 
 ## What changed
 
-- Fixed claim command forwarding. `npm test -- --grep @claim:…` now runs the
-  unit suite and forwards `--grep` to Playwright, rather than treating a claim
-  tag as a file name.
-- Changed the production static build to package the MV3 extension before
-  publishing the site. `npm run build:site` now always creates
-  `dist/site/downloads/speak-page-actions.zip` (295,748 bytes in this build).
-- Replaced the declarative `<all_urls>` content script with on-demand
-  `chrome.scripting.executeScript` injection on the active tab. The packaged
-  manifest has `activeTab`, `scripting`, and `storage`; it has no
-  `content_scripts` and no `<all_urls>` host permission.
-- Hardened destructive-label detection for realistic concatenated inline text
-  such as `BUTTONDelete saved draft review`.
-- Made undo truthful and effective for a local deleted list/item: it captures
-  and restores the complete removed container. It does not promise to undo a
-  form submit or a server-side mutation.
-- Speech now starts only from the hold control and is enabled only when the
-  browser exposes `processLocally`; otherwise the popup gives a typed-command
-  fallback. No spoken text is sent through the extension.
-- Repaired dark-scheme contrast, initial keyboard focus order, and service
-  worker updates (versioned cache, old-cache cleanup, `skipWaiting`, and
-  network-first document updates with offline fallback).
-- Removed the false free-export statement and recorded all remaining
-  user-facing claims with exact tagged regression coverage.
+- Added product and popup touch-target layers that enforce a real 44x44 CSS-pixel
+  minimum. This covers the site wordmark/navigation, demo reset/start controls,
+  footer links, license restore flow, popup Scan control, skip link, Pro summary,
+  form controls, and all buttons.
+- Stacked the 390px header navigation so the larger hit areas keep adequate
+  spacing and do not crowd or overlap.
+- Restored the license form's intended collapsed state. Its grid rule had
+  overridden the HTML `hidden` attribute; the form now appears only after the
+  restore control is activated.
+- Replaced the catch-all SPA fallback with explicit rewrites for `/`, `/demo`,
+  `/privacy`, and `/terms`. Added a product-styled static `404.html` and a Static
+  Web Apps 404 response override, so unknown paths retain HTTP 404.
+- Removed the error page from `sitemap.xml`, updated the plain-language not-found
+  copy, and recorded the 44px interaction rule in `.factory/design.md`.
+- Added rendered-box regression tests for every visible site control at 390px,
+  the revealed license form, and the built extension popup. Added an HTTP-level
+  404 browser regression and package assertions for the production routing
+  configuration.
 
-## Verification
+## Clean verification
 
-Performed from a clean dependency install on 2026-08-29:
+The exact work-order build sequence passed on 2026-08-29:
 
 ```sh
 npm ci
+npm test
+npm run build:site
 npm run typecheck
 npm run lint
-npm test
-npm run build
 npm run test:package
 ```
 
-Results:
+- Unit: 5 passed.
+- Playwright integration/browser: 20 passed.
+- Every one of the 13 commands in `.factory/claims.json` passed verbatim from a
+  clean state.
+- Consumer package check passed for
+  `dist/site/downloads/speak-page-actions.zip`.
+- Production dependency audit: 0 findings with `npm audit --omit=dev`. `npm ci`
+  still reports 10 transitive development-tool advisories (1 low, 2 moderate,
+  4 high, 3 critical); no runtime dependency is shipped to users.
+- Local `verify-url.sh` passed with HTTP 200, title, `lang=en`, one h1, main
+  landmark, image alt text, and no console errors. Screenshots and output are in
+  `.factory/evidence/repair-2/`.
+- Local Lighthouse scored Performance 1.00, Accessibility 1.00, Best Practices
+  1.00, and SEO 1.00. LCP was 1.9s, CLS 0, and total blocking time 30ms. As in
+  the prior run, Chromium crashed after the JSON report was written; all scored
+  audits completed and are in `.factory/evidence/repair-2/lighthouse.json`.
+- Initial production assets are 11,648 bytes JS (4,544 gzip), 9,453 bytes CSS
+  (2,846 gzip), and 142,634 bytes for the hero WebP.
+- A real unpacked MV3 launch under Chromium rendered with no page errors. Scan
+  page measured 87.83x44; no visible popup target measured below 44x44.
 
-- Type check and lint: pass.
-- Unit + Playwright: 5 unit tests and 17 browser tests pass.
-- All claim commands in `.factory/claims.json` pass individually, including
-  the verifier's original `sample-action`, `demo-local`, and `offline-reload`
-  commands.
-- Browser coverage exercises desktop and 390 px, keyboard skip-link order,
-  light and dark Axe serious/critical checks on `/`, `/demo`, `/privacy`, and
-  `/terms`, offline reload, cache-update cleanup, demo local-only requests,
-  destructive review classification, effective local-delete undo, password
-  exclusion, and the packaged extension permissions.
-- `/opt/fleet/lib/verify-url.sh http://127.0.0.1:4173 .factory/evidence/repair`
-  passed: 200 response, no browser console errors, title/lang/one h1/main,
-  image alt text, and desktop/mobile screenshots.
-- Local Lighthouse output: Performance 0.99 and Accessibility 1.00. The
-  report is at `.factory/evidence/repair/lighthouse.json`; Chrome emitted a
-  post-collection screenshot-target crash, but the scored audits completed.
-- Initial site JS is 4,531 bytes gzip and CSS is 2,753 bytes gzip. The original
-  hero remains 142.63 KB WebP.
+Browser coverage includes desktop and 390px, light and dark schemes, keyboard
+skip-link focus and its 3px focus outline, Axe serious/critical scans, demo
+normal/unknown/destructive/undo/reset flows, active-tab packaging, password
+exclusion, local speech gating, offline reload, service-worker cache cleanup,
+demo request/storage isolation, package permissions, and the HTTP 404 response.
 
-## Deploy and consumer artifact
+## Deployment and live evidence
 
-Deployment class remains static. Use `npm run build:site` as the deployment
-build command; it includes the extension download under `dist/site/downloads/`.
-`npm run test:package` validates that archive as a consumer MV3 package.
+Deployed `dist/site` with the work-order static deployment utility. Azure Static
+Web Apps deployment `e40b250b-961d-4ec2-bd77-ee81b45bb375` succeeded at
+https://speak-page-actions.sociobot.in.
 
-Deployed with the factory static work-order utility on 2026-08-29. Azure Static
-Web Apps deployment `ac5ba9a3-a68a-4c8c-a172-6ea60d126bce` succeeded to the
-existing production host. The live download now returns HTTP 200,
-`application/zip`, and 295,748 bytes. Its SHA-256 matches the local artifact:
-`9664d453056fefe25fa0669c71bc25289733e7761d4414f9a2a74c7ab5df70f3`.
-The live `verify-url.sh` check also passed with no console errors and the
-required title, language, h1, main landmark, and image alt text.
+- `/`, `/demo`, `/privacy`, and `/terms` return 200. `/no-such-route` returns
+  HTTP 404 with the styled error document. All same-origin links return 200.
+- The download returns 200 as `application/zip`, 298,292 bytes. Local and live
+  SHA-256 are both
+  `7c777562176cac83bb03f17d9fc2a827a3844dcd1bfdc764ed787cfed3da7574`.
+- Live JS SHA-256 matches local:
+  `b558dfeb3a55804f2175333266bd5faac94f577fa3e75501c197a01bff7a7353`.
+  Live CSS SHA-256 matches local:
+  `6c3f6c1cafdd0d0164381c0aad5880f2fd199778abe1693753e9819193506b48`.
+- Live desktop/390px and light/dark checks across all routes found one h1, no
+  serious or critical Axe findings, and no undersized target. Successful routes
+  had no console or page errors. The 404 navigation produces only the browser's
+  expected failed-document message for its intentional HTTP 404 status.
+- The live demo made requests only to
+  `https://speak-page-actions.sociobot.in`, stored only `demo:spa:sample`, and
+  reloaded successfully offline under service-worker control.
+- Live keyboard focus begins on Skip to main content with a
+  `rgb(21, 91, 140) solid 3px` outline.
+- Live responses include HSTS, `nosniff`, strict-origin referrer policy, and the
+  configured restrictive CSP. Hashed assets use one-year immutable caching.
+- The live license identity endpoint accepts the deployed origin via CORS and
+  returned `{valid:false, reason:"invalid"}` for a throwaway token without
+  storing page data.
 
 ## Known limits
 
-- Undo is available only when a page synchronously removes a local list/item
-  container; browser extensions cannot safely reverse a submitted form,
-  navigation, or remote mutation.
-- Voice control depends on a browser/OS implementation that exposes verified
-  on-device speech processing. Typed commands always remain available.
-- `npm ci` reports 10 transitive development-dependency audit findings from
-  the existing lockfile; no runtime dependency or user data is affected.
+- Undo applies only when a page synchronously removes a local list/item
+  container. The extension cannot reverse navigation, submitted forms, or remote
+  mutations.
+- Voice input requires a browser/OS implementation that exposes verified
+  on-device speech processing. Typed commands remain available everywhere.

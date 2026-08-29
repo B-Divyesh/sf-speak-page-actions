@@ -3,6 +3,17 @@ import AxeBuilder from '@axe-core/playwright';
 import { readFileSync, readdirSync } from 'node:fs';
 import { installPageAgent } from '../src/lib/page-agent';
 
+async function undersizedTargets(page: import('@playwright/test').Page) {
+  return page.locator('a[href], button, input, select, summary').evaluateAll((elements) => elements.flatMap((element) => {
+    const rect = element.getBoundingClientRect();
+    const style = getComputedStyle(element);
+    if (!rect.width || !rect.height || style.display === 'none' || style.visibility === 'hidden' || element.closest('[hidden]')) return [];
+    return rect.width < 44 || rect.height < 44
+      ? [{ name: (element.textContent || element.getAttribute('aria-label') || element.tagName).trim().replace(/\s+/g, ' '), width: rect.width, height: rect.height }]
+      : [];
+  }));
+}
+
 test('landing has no serious accessibility violations at phone width', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
@@ -10,13 +21,52 @@ test('landing has no serious accessibility violations at phone width', async ({ 
   expect(results.violations.filter((item) => ['serious', 'critical'].includes(item.impact || '')).map((item) => item.id)).toEqual([]);
 });
 
+test('all site controls are at least 44 by 44 CSS pixels at phone width', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  for (const path of ['/', '/demo', '/privacy', '/terms', '/404']) {
+    await page.goto(path);
+    if (path === '/') {
+      await expect(page.getByLabel('License token')).toBeHidden();
+      await page.getByRole('button', { name: 'Have a license? Paste it' }).click();
+      await expect(page.getByLabel('License token')).toBeVisible();
+    }
+    expect(await undersizedTargets(page), path).toEqual([]);
+  }
+});
+
+test('packaged extension controls are at least 44 by 44 CSS pixels', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const html = readFileSync('dist/extension/popup.html', 'utf8')
+    .replace(/<link[^>]+rel="stylesheet"[^>]*>/g, '')
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/g, '');
+  const popupCss = readdirSync('dist/extension/assets')
+    .filter((file) => file.startsWith('popup-') && file.endsWith('.css'))
+    .map((file) => readFileSync(`dist/extension/assets/${file}`, 'utf8'))
+    .join('\n');
+  await page.setContent(html);
+  await page.addStyleTag({ content: popupCss });
+  await page.getByText('Pro command aliases').click();
+  expect(await undersizedTargets(page)).toEqual([]);
+});
+
 test('dark routes have no serious accessibility violations', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'dark' });
-  for (const path of ['/', '/demo', '/privacy', '/terms']) {
+  for (const path of ['/', '/demo', '/privacy', '/terms', '/404']) {
     await page.goto(path);
     const results = await new AxeBuilder({ page }).analyze();
     expect(results.violations.filter((item) => ['serious', 'critical'].includes(item.impact || '')).map((item) => item.id), path).toEqual([]);
   }
+});
+
+test('unknown URLs return the styled HTTP 404 response', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const response = await page.goto('/no-such-route');
+  expect(response?.status()).toBe(404);
+  await expect(page).toHaveTitle('Page not found — Speak Page Actions');
+  await expect(page.getByRole('heading', { level: 1, name: 'This page could not be found' })).toBeVisible();
+  expect(await undersizedTargets(page)).toEqual([]);
+  const results = await new AxeBuilder({ page }).analyze();
+  expect(results.violations.filter((item) => ['serious', 'critical'].includes(item.impact || '')).map((item) => item.id)).toEqual([]);
 });
 
 test('initial keyboard focus reaches the skip link before page content', async ({ page }) => {

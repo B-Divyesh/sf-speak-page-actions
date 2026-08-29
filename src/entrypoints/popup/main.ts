@@ -1,5 +1,6 @@
 import './style.css';
 import './pro.css';
+import './touch.css';
 import { findAction, normaliseWords, type PageAction } from '../../lib/actions';
 import { installPageAgent } from '../../lib/page-agent';
 import { browser } from 'wxt/browser';

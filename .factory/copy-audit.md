@@ -8,14 +8,14 @@
 | On-device speech or typed commands | 5 | pass |
 | Visible labels only | 3 | pass |
 | It reads buttons, links, and labelled fields already visible on the current page. | 13 | pass |
-| It scans the page you are on. | 7 | pass |
-| Say “click” and a label you can review. | 9 | pass |
+| It scans the active page only. | 6 | pass |
+| Use on-device speech, or type a label you can review. | 10 | pass |
 | It asks before labels such as delete or publish. | 9 | pass |
 | It does not listen in the background. | 7 | pass |
 | It never lists password fields. | 6 | pass |
 | Pro costs $12 once. | 4 | pass |
 | It lets you save local aliases in the extension. | 10 | pass |
-| Core page actions, export, and safety checks stay free. | 9 | pass |
+| Core page actions and safety checks stay free. | 8 | pass |
 
 No landing sentence exceeds 22 words or uses a banned term.
 

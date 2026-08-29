@@ -15,7 +15,7 @@
     "typecheck": "npx tsc --noEmit",
     "lint": "npm run typecheck",
     "test:package": "node scripts/check-package.mjs",
-    "preview": "vite preview --config vite.site.config.ts --host 127.0.0.1"
+    "preview": "node scripts/serve-site.mjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.11.0",

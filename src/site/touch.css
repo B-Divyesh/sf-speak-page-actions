@@ -1,0 +1,48 @@
+/* Interactive targets stay usable for people with limited hand mobility. */
+[hidden] {
+  display: none !important;
+}
+
+.skip,
+.site-header .wordmark,
+.site-header nav a,
+footer nav a,
+.link-button,
+.demo-bar button,
+.demo-bar a {
+  display: inline-flex;
+  min-width: 44px;
+  min-height: 44px;
+  align-items: center;
+}
+
+.link-button {
+  padding: 8px 4px;
+}
+
+.demo-bar {
+  padding-block: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.demo-bar button,
+.demo-bar a {
+  margin-left: 0;
+  padding: 9px 8px;
+}
+
+@media (max-width: 700px) {
+  .site-header {
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .site-header nav {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}

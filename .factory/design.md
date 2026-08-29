@@ -28,6 +28,8 @@ Display text uses the local system serif stack, `Georgia, ui-serif, serif`, givi
 
 Buttons are square-ish ink stamps with a 2px outline and a 3px offset shadow. Action labels have small dotted rule separators. Cards are used only for independent page actions. A halftone pattern sits behind headings and status glyphs; it is CSS, so it remains sharp and does not add image weight.
 
+Every interactive target is at least 44 by 44 CSS pixels on the 390px site and extension popup. Compact text links keep their printed-label appearance while their hit areas expand around the ink.
+
 The signature interaction is a single expanding ring from the push-to-talk control while speech is active. The ring stops immediately when listening stops. With reduced motion it becomes a static oxide outline; all other transitions are removed.
 
 ## Art plan and provenance

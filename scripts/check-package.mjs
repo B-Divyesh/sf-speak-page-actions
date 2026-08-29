@@ -10,4 +10,11 @@ if (manifest.manifest_version !== 3 || manifest.name !== 'Speak Page Actions') t
 if (manifest.content_scripts?.length) throw new Error('The package must not inject a content script on every page.');
 if (manifest.host_permissions?.some((permission) => permission === '<all_urls>')) throw new Error('The package must not request all-site host permission.');
 if (!readFileSync(archive)) throw new Error('The download archive is empty.');
+const staticConfig = JSON.parse(readFileSync('dist/site/staticwebapp.config.json', 'utf8'));
+if (staticConfig.navigationFallback) throw new Error('A navigation fallback would turn unknown URLs into HTTP 200 responses.');
+for (const route of ['/', '/demo', '/privacy', '/terms']) {
+  if (!staticConfig.routes?.some((entry) => entry.route === route && entry.rewrite === '/index.html')) throw new Error(`Missing SPA rewrite for ${route}.`);
+}
+if (staticConfig.responseOverrides?.['404']?.rewrite !== '/404.html') throw new Error('Missing static 404 response override.');
+if (!existsSync('dist/site/404.html')) throw new Error('Missing styled static 404 page.');
 console.log(`Consumer package verified: ${archive}`);

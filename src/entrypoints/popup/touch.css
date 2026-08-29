@@ -1,0 +1,32 @@
+/* Keep every popup control at least 44px in each dimension. */
+button {
+  min-width: 44px;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+summary:focus-visible,
+a:focus-visible {
+  outline: 3px solid var(--blue);
+  outline-offset: 3px;
+}
+
+.skip {
+  top: -60px;
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+}
+
+.text-button,
+.pro summary,
+.pro input,
+.pro select {
+  min-height: 44px;
+}
+
+.pro summary {
+  display: flex;
+  align-items: center;
+}
