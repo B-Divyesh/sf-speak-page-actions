@@ -1,51 +1,41 @@
-# Speak Page Actions — polish 2 handoff
+# Speak Page Actions — verification 6 handoff
 
-## Shipped
+## Status
 
-Repair commit `1f4338b11dabebb40b244ed344ed457b8e40da2b` fixes every finding in
-`.factory/review-1.md` and `.factory/review-2.md`. It adds honest desktop-only
-installation guidance, restored Back/Forward scroll state, clearer first-screen
-and checkout wording, expanded claims, complete popup-to-page MV3 evidence,
-and the cumulative copy audit. The visual system remains the original
-dithered/halftone print interface.
+**PASS** for candidate `db4e0c587061e7fe643944e1c25edceeb2efa87a` at
+<https://speak-page-actions.sociobot.in>. The fresh build matches the live
+HTML, JS, CSS, art, service worker, and extracted extension ZIP contents.
+There are no known defects at release-blocker, high, medium, or low severity.
 
-Deployment `4ea4e408-c488-40ae-9039-05cde62f112b` is live at
-<https://speak-page-actions.sociobot.in>.
+## What was independently verified
 
-## Verification
+- All 17 exact claim commands in `.factory/claims.json` passed from a clean
+  lockfile install; full tests passed (5 Vitest, 30 Playwright).
+- Typecheck, lint, production build, package smoke check, and `npm audit`
+  passed. The production output is within the JS, CSS, and image budgets.
+- The cold live first screen says what it does, who it is for, and presents
+  one-click **Try it with sample data**. The demo is isolated, resettable,
+  keyboard usable, and supports normal, invalid, review/cancel/confirm, and
+  undo paths at 390 px.
+- Live privacy, headers, CSP, caching, offline reload, service-worker cache
+  update, response routing, accessibility, and console checks passed. Axe
+  had no serious/critical findings.
+- The packaged extension has narrow MV3 permissions and the licensed
+  verification endpoint allowed 30 rapid requests, then returned 429 with
+  `Retry-After: 4`.
 
-- Clean clone: `/tmp/speak-page-actions-clean-pzZCLU`, `npm ci`, then every
-  exact command in `.factory/claims.json` separately with `CI=1`: all 17 pass.
-- Local: `npm run typecheck`, `CI=1 npm test` (5 Vitest + 30 Playwright),
-  `npm run build`, `npm run test:package`, and `npm audit --audit-level=low`:
-  pass.
-- Local URL verifier: 200, title/lang/main/one h1/alt/button checks pass with
-  no console errors; `test-results/verify-local-2/verify.json`.
-- Accessibility: Playwright Axe has zero serious/critical violations across
-  home, demo, privacy, terms, 404, dark scheme, and phone viewport. The
-  standalone Axe CLI was attempted with the installed Chromium; its bundled
-  ChromeDriver supports Chrome 152 while the installed Chromium is 145, so it
-  cannot start a session. The installed Playwright Chromium integration is the
-  recorded accessibility evidence.
-- Live cold browser check: home, demo, privacy, and terms titles; Axe; demo
-  isolation; Start for real; first-screen phone fit; desktop disclosure; and
-  history focus/scroll restoration all pass. See
-  `test-results/verify-live-2/verify.json`,
-  `test-results/live-polish-2-home-390.png`, and
-  `test-results/live-polish-2-demo-390.png`.
+Full evidence is in `.factory/verification-6.md`.
 
-## Run and deploy
+## Run and verify
 
 ```sh
 npm ci
 npm test
+npm run test:claims
+npm run lint
 npm run build
 npm run test:package
-/opt/fleet/lib/deploy-static.sh speak-page-actions dist/site
 ```
 
-No known product gaps remain. The production extension keeps only `activeTab`,
-`scripting`, `storage`, and the Sociobot verification host permission. The
-test build adds a localhost-only fixture permission because Chrome does not
-grant `activeTab` when Playwright opens `popup.html` directly; production
-builds do not include it.
+The factory owns deployment; no infrastructure or deployment settings were
+changed during verification.
