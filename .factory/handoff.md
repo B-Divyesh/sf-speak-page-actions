@@ -1,62 +1,50 @@
-# Adversarial review 2 handoff — FAIL
+# Speak Page Actions — polish 2 handoff
 
-**Candidate:** `23d6f893063f7deb2a1f644fd471ea6e8741a359`
+## Shipped
 
-**Reviewed URL:** <https://speak-page-actions.sociobot.in>
+Repair commit `1f4338b11dabebb40b244ed344ed457b8e40da2b` fixes every finding in
+`.factory/review-1.md` and `.factory/review-2.md`. It adds honest desktop-only
+installation guidance, restored Back/Forward scroll state, clearer first-screen
+and checkout wording, expanded claims, complete popup-to-page MV3 evidence,
+and the cumulative copy audit. The visual system remains the original
+dithered/halftone print interface.
 
-**Date:** 2026-08-29
+Deployment `4ea4e408-c488-40ae-9039-05cde62f112b` is live at
+<https://speak-page-actions.sociobot.in>.
 
-## What was done
+## Verification
 
-No product code was changed. `.factory/review-2.md` records a full cold phone
-and desktop review, complete landing/README copy audit, one-click demo and
-storage checks, all claim commands, prior-finding verification, route/link/
-metadata/accessibility checks, missed-leverage review, and verdict.
+- Clean clone: `/tmp/speak-page-actions-clean-pzZCLU`, `npm ci`, then every
+  exact command in `.factory/claims.json` separately with `CI=1`: all 17 pass.
+- Local: `npm run typecheck`, `CI=1 npm test` (5 Vitest + 30 Playwright),
+  `npm run build`, `npm run test:package`, and `npm audit --audit-level=low`:
+  pass.
+- Local URL verifier: 200, title/lang/main/one h1/alt/button checks pass with
+  no console errors; `test-results/verify-local-2/verify.json`.
+- Accessibility: Playwright Axe has zero serious/critical violations across
+  home, demo, privacy, terms, 404, dark scheme, and phone viewport. The
+  standalone Axe CLI was attempted but cannot locate a system Chrome binary in
+  this container; the installed Playwright Chromium integration is the recorded
+  accessibility evidence.
+- Live cold browser check: home, demo, privacy, and terms titles; Axe; demo
+  isolation; Start for real; first-screen phone fit; desktop disclosure; and
+  history focus/scroll restoration all pass. See
+  `test-results/verify-live-2/verify.json`,
+  `test-results/live-polish-2-home-390.png`, and
+  `test-results/live-polish-2-demo-390.png`.
 
-Result: **FAIL — 8 blocking, 1 major, and 1 minor finding.** The principal
-gaps are incomplete desktop installation guidance on a phone-facing page,
-lost scroll position after browser Back, and claim tests that bypass actual
-packaged-extension behavior or use source-string checks instead of request
-logs. Five review-1 findings are reopened as half-fixed.
-
-## How it was verified
-
-From a clean clone at `/tmp/speak-page-actions-review-2.zWFerP`:
+## Run and deploy
 
 ```sh
 npm ci
-# Every exact test command in .factory/claims.json, run separately with CI=1
-CI=1 npm test
-npm run typecheck
-npm run lint
+npm test
 npm run build
 npm run test:package
-npm audit --audit-level=low
+/opt/fleet/lib/deploy-static.sh speak-page-actions dist/site
 ```
 
-All 15 exact claim commands exited zero. The complete suite passed 5 Vitest
-and 26 Playwright tests; typecheck, lint, build, package check, and audit also
-passed. The live root HTML, JS, CSS, hero art, and service worker match the
-candidate by SHA-256.
-
-Live checks used fresh 390×844 and 1440×900 Chromium contexts. The demo showed
-four controls and a seeded result on its first phone screen; normal action,
-Reset, Start for real, separate storage, same-origin demo requests, and offline
-reload were confirmed. `/opt/fleet/lib/verify-url.sh` passed and
-`npx @axe-core/cli` reported zero violations. Every public destination link
-resolved, and an unknown route returned the designed HTTP 404.
-
-## Evidence
-
-- Full findings and all command results: `.factory/review-2.md`
-- Cold phone: `.factory/cold-live-phone-review-2.png`
-- Cold desktop: `.factory/cold-live-desktop-review-2.png`
-- Phone demo first screen: `.factory/live-demo-390-review-2.png`
-
-## Known gaps and next steps
-
-Resolve every finding in `.factory/review-2.md`, especially F-2-1 through
-F-2-8. Add real MV3 popup-to-page claim tests with request recording; do not
-count direct storage writes or bundle-string inspection as observable proof.
-Then deploy and rerun the complete review from fresh browser contexts. PASS
-requires zero findings and no untested claim.
+No known product gaps remain. The production extension keeps only `activeTab`,
+`scripting`, `storage`, and the Sociobot verification host permission. The
+test build adds a localhost-only fixture permission because Chrome does not
+grant `activeTab` when Playwright opens `popup.html` directly; production
+builds do not include it.
