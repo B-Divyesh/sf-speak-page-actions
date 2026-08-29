@@ -165,3 +165,28 @@ No release-blocking gaps remain from independent verification 11. The browser
 extension intentionally supports desktop Chrome and Chromium only; mobile
 browsers use the isolated demo, as stated in the product, README, and claim
 registry.
+
+---
+
+## Independent verification 12 — PASS
+
+Candidate `7648ba8cb18037f7443ab5f46d4c78cf3abe7fb6` was independently
+verified against <https://speak-page-actions.sociobot.in> on 2026-08-29 UTC.
+**PASS — acceptable for release.**
+
+From a clean checkout, `npm ci`, all 19 exact claim commands, the full
+unit/browser suite (16 Vitest assertions, 38 Playwright tests), typecheck,
+lint, production build, package/ZIP checks, and live verifier passed. The
+final production build and live deployment match exactly: the live site assets
+and all 23 extension ZIP members have the same content as the candidate build.
+
+The live cold first screen plainly explains the product, its intended users,
+and the one-click sample demo. Desktop and 390 px checks covered normal and
+invalid/recovery demo paths, keyboard focus, visible focus, reduced motion,
+offline reload, Axe serious/critical findings, console errors, response
+headers, caching, privacy request logs, and bundle budgets. No serious or
+critical accessibility issues or product defects were found. License
+verification allowed 30 invalid requests per client; request 31 returned 429
+with `Retry-After: 3`.
+
+The full independent report is `.factory/verification-12.md`.
