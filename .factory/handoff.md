@@ -1,32 +1,31 @@
-# Speak Page Actions — verification 6 handoff
+# Speak Page Actions — review 3 handoff
 
 ## Status
 
-**PASS** for candidate `db4e0c587061e7fe643944e1c25edceeb2efa87a` at
-<https://speak-page-actions.sociobot.in>. The fresh build matches the live
-HTML, JS, CSS, art, service worker, and extracted extension ZIP contents.
-There are no known defects at release-blocker, high, medium, or low severity.
+**FAIL** for `9a058e9c93fdf909cefdc01e1c40189bcddd475c`. This reviewer made no
+product-code changes. The full report is `.factory/review-3.md`.
 
-## What was independently verified
+## What was reviewed
 
-- All 17 exact claim commands in `.factory/claims.json` passed from a clean
-  lockfile install; full tests passed (5 Vitest, 30 Playwright).
-- Typecheck, lint, production build, package smoke check, and `npm audit`
-  passed. The production output is within the JS, CSS, and image budgets.
-- The cold live first screen says what it does, who it is for, and presents
-  one-click **Try it with sample data**. The demo is isolated, resettable,
-  keyboard usable, and supports normal, invalid, review/cancel/confirm, and
-  undo paths at 390 px.
-- Live privacy, headers, CSP, caching, offline reload, service-worker cache
-  update, response routing, accessibility, and console checks passed. Axe
-  had no serious/critical findings.
-- The packaged extension has narrow MV3 permissions and the licensed
-  verification endpoint allowed 30 rapid requests, then returned 429 with
-  `Retry-After: 4`.
+- Fresh live Chromium reads at 390×844 and 1440×900; live demo, reset,
+  Start-for-real, offline/privacy request boundary, route/back/focus/scroll,
+  metadata, 404, links, touch targets, and checkout/download availability.
+- Every declared claim command was run from a clean clone. All 17 passed.
+- `npm test` (5 Vitest + 30 Playwright), build, package check, lint/typecheck,
+  and low-threshold audit passed in that clone.
+- Every prior review/polish finding was reread and rechecked in code and on the
+  live site.
 
-Full evidence is in `.factory/verification-6.md`.
+## Remaining work
 
-## Run and verify
+1. Fix the blocking license-recovery boundary: the landing route stores a
+   token in website localStorage but cannot activate the extension’s separate
+   Pro storage.
+2. Correct the related Privacy storage statement and add full-flow test
+   coverage for every public license form.
+3. Add a declared claim/test for the desktop/mobile support statements.
+
+## Verify after repair
 
 ```sh
 npm ci
@@ -37,5 +36,5 @@ npm run build
 npm run test:package
 ```
 
-The factory owns deployment; no infrastructure or deployment settings were
-changed during verification.
+Then repeat the live 390px `/demo` sandbox flow and the public-to-extension
+Pro recovery flow described in `.factory/review-3.md`.
