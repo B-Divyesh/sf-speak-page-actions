@@ -23,9 +23,10 @@ Deployment `4ea4e408-c488-40ae-9039-05cde62f112b` is live at
   no console errors; `test-results/verify-local-2/verify.json`.
 - Accessibility: Playwright Axe has zero serious/critical violations across
   home, demo, privacy, terms, 404, dark scheme, and phone viewport. The
-  standalone Axe CLI was attempted but cannot locate a system Chrome binary in
-  this container; the installed Playwright Chromium integration is the recorded
-  accessibility evidence.
+  standalone Axe CLI was attempted with the installed Chromium; its bundled
+  ChromeDriver supports Chrome 152 while the installed Chromium is 145, so it
+  cannot start a session. The installed Playwright Chromium integration is the
+  recorded accessibility evidence.
 - Live cold browser check: home, demo, privacy, and terms titles; Axe; demo
   isolation; Start for real; first-screen phone fit; desktop disclosure; and
   history focus/scroll restoration all pass. See
