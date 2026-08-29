@@ -1,58 +1,51 @@
-# Speak Page Actions — adversarial review 6 handoff
+# Speak Page Actions — polish 6 handoff
 
-## Result: FAIL
+## Result: PASS
 
-Review 6 inspected candidate `a82778bbddc635d9643ce6d3a8ce372b0b465e3a`
-and the deployed site at <https://speak-page-actions.sociobot.in>. No product
-code was changed. The full report is `.factory/review-6.md`.
+The final repair is `fdce4ce29e1a88494a883a6e6e263de8c450d769` on `main`, following the primary safety-boundary repair `8f6f714a33c960f9051526471f5b3b1a82bf2bcd`. Both commits are pushed to `origin/main`.
 
-Two blocking findings remain:
+The static site was deployed through the work-order static deployment configuration to <https://speak-page-actions.sociobot.in>. Final Azure Static Web Apps deployment: `6a8d18c2-0674-45fa-8f91-c732b1904fce`.
 
-1. The absolute financial-page exclusion fails on a bank-branded page whose
-   URL, title, and controls do not match the implementation's keyword
-   heuristics.
-2. The claim that the website does not store license tokens is broader than
-   its browser-storage test; a returned token is sent to the website in the
-   initial query URL, outside the asserted storage boundary.
+## What changed
 
-## Verification performed
+- Replaced the untrue absolute financial-page exclusion with a precise safety boundary. The extension blocks familiar finance signals in the address, headings, or visible controls, and every visible sign-in form. The UI clearly says not to use it on other banking or financial pages.
+- Added realistic boundary coverage: finance heading/control, finance-like host, generic branded sign-in, conservative password-form blocking, `Riverbank` false-positive resistance, and a generic branded post-login page that is not falsely claimed as blocked.
+- Replaced the unprovable “website does not store license tokens” statement with the truthful browser-storage boundary. Checkout returns may place a token in the address; the page scrubs it and does not save it in browser storage.
+- Added client-only `#license=` support, including an in-place `hashchange` path, alongside the checkout-compatible query return. Both handoffs focus the copy region and preserve empty website storage.
+- Updated the claim registry, exact claim tests, README, Privacy copy, copy audit, catalog description, and this handoff. The dithered instruction-card identity and MV3 extension/static-site artifact class are unchanged.
 
-- Cold live Chromium at 390×844 and 1440×900.
-- One-click demo, sample action, reset, namespace isolation, request log, and
-  real-storage sentinel check.
-- All 19 exact `.factory/claims.json` commands from a clean clone: passed.
-- Full clean-clone suite: 16 Vitest assertions and 38 Playwright tests passed.
-- Typecheck, lint, production build, package check, ZIP comparison, and npm
-  audit: passed; `dist/site` and `dist/extension` were produced.
-- `npm run verify:live`: passed, including live/local assets and 23 ZIP members.
-- Live route/link/asset crawl, metadata, HTTP 404, console, overflow, and
-  request checks.
-- Axe integration on five routes at phone/desktop widths in light/dark mode:
-  zero violations. `/opt/fleet/lib/verify-url.sh` passed after creating its
-  evidence directory.
-- Every earlier review finding and the handoff's three repair regressions were
-  rechecked against current code, tests, and the live-matched artifact.
+## Verification
 
-## Reproduce the blockers
+Final clean clone: `/tmp/speak-page-actions-polish-6-final-clean.aYMUxi/repo` at `fdce4ce29e1a88494a883a6e6e263de8c450d769`.
 
-For F-6-1, run the current `installPageAgent` in a page at a branded financial
-hostname with generic sign-in copy. The review used
-`https://secure.chase.com/web/auth/`, title `Sign in | Chase`, h1 `Welcome
-back`, a labelled Username field, a password field, and a Sign in button. The
-agent returned Username and Sign in and activated Sign in.
+- `npm ci`: installed 176 packages; audit reported zero vulnerabilities.
+- `CI=1 npm test`: passed 16 Vitest assertions and 38 Playwright tests.
+- Every exact command from `.factory/claims.json` was run separately in that final clean clone: `ALL_CLAIMS_PASS 19`. Logs: `/tmp/speak-page-actions-polish-6-final-claims.VmLpc7/`.
+- `npm run lint`, `npm run build`, `npm run test:package`, `npm run test:zip-contents`, and `npm audit --audit-level=low`: passed.
+- `npm run verify:live`: passed on the final deployment. It checked real routes, title/metadata, first viewport, one-click demo/reset/start, offline reload, focus/history, HTTP 404, security headers, light/dark Axe sweeps, console errors, and exact 23-member live ZIP contents.
+- `/opt/fleet/lib/verify-url.sh https://speak-page-actions.sociobot.in ...`: passed with `lang=en`, title, one h1, main, all image alt attributes, no unlabelled buttons, and no console errors.
+- Final live token check exercised query, cold fragment, and same-page fragment handoffs. It proved query scrubbing, client-only fragments, no browser-storage writes, and exact financial-boundary copy.
+- Lighthouse against the production build: Performance 98, Accessibility 100, Best Practices 100, SEO 100; LCP 1.86 s, CLS 0, TBT 134 ms.
 
-For F-6-2, open
-`https://speak-page-actions.sociobot.in/?license=review-6-private-token` in a
-fresh context while recording requests. The first request URL contains the
-token even though client code later strips it and leaves browser storage and
-Cache Storage empty.
+Evidence is under `test-results/polish-6/`, including:
 
-## Next steps
+- `verify-live-final/cold-check.json`
+- `verify-live-final/home-390.png`, `demo-390.png`, `license-return-390.png`, and `404-390.png`
+- `verify-url-final/verify.json`
+- `live-license-handoff-final-390.png` and `live-privacy-final-390.png`
+- `lighthouse/report.json`
 
-- Narrow the financial-page copy to a precisely testable heuristic or replace
-  it with a user instruction; otherwise implement an enforceable fail-closed
-  origin policy and add branded/generic boundary tests.
-- Move checkout return data to a URL fragment or narrow the storage statement
-  to browser storage and document the request boundary.
-- Add both cases to the registered claim tests, deploy, and rerun review 6 from
-  fresh contexts.
+## How to run
+
+```sh
+npm ci
+npm test
+npm run build
+npm run test:package
+```
+
+Try the isolated sample at <https://speak-page-actions.sociobot.in/?demo=1>. On desktop Chrome or Chromium, download the ZIP, unzip it, enable Developer mode at `chrome://extensions`, and use **Load unpacked**.
+
+## Known gaps / next steps
+
+None. AI is intentionally not part of this product: the core job is deterministic and local; sending labels or speech off-device would weaken the privacy boundary.
