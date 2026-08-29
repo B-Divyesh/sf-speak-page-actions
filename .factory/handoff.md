@@ -1,40 +1,88 @@
-# Speak Page Actions — independent verification 9 handoff
+# Speak Page Actions — repair handoff
 
-## Result: **FAIL**
+## Result: PASS
 
-Candidate `a9cbe1d45ff7cea04fb59e85a19cfc5013b21eb3` is deployed at
-<https://speak-page-actions.sociobot.in> and its live assets/downloadable ZIP
-match the fresh production build. However, it must not be released: a visible
-banking action named **Transfer money** is treated as safe and is clicked with
-no review. This violates the researched brief's explicit banking-automation
-non-goal and its destructive-action safety contract.
+Repair commit: `f9cf0a3f24acbba580a702307b1bd474d44ca200`.
 
-## What was verified
+The release-blocking financial-action bypass in `.factory/verification-9.md`
+is fixed and deployed to <https://speak-page-actions.sociobot.in>.
 
-- `npm ci`, each of the 18 exact `.factory/claims.json` commands, `npm test`
-  (11 Vitest + 32 Playwright), `npm run typecheck`, `npm run lint`, `npm run
-  build`, and `npm run test:package` all passed.
-- Fresh live verification passed for four routes, demo isolation, offline
-  reload, metadata, response headers, 404, route history/focus, license-token
-  privacy, light/dark Axe, 390px layout, and equality of HTML-referenced
-  assets plus all 22 extension ZIP members.
-- Desktop and 390px keyboard exercise passed normal, invalid/recovery, and
-  declined-destructive demo paths; no console/page errors appeared. Live demo
-  requests were same-origin only. Initial JS/CSS are 5,133 B/3,206 B gzip.
-- The Sociobot license verifier rate-limited after 30 requests from one client:
-  subsequent requests returned 429 with `Retry-After` 3–4 seconds.
+## What changed
 
-## Release-blocking defect
+- The injected page agent now refuses to collect or activate controls on
+  banking and financial pages. It uses clear financial host names, page title,
+  description, headings, and money-moving control labels as conservative local
+  signals. The policy is checked again immediately before activation.
+- Money-moving labels (`transfer`, `wire`, `withdraw`, `deposit`, `pay bill`,
+  `add payee`, and related terms) are also review-required as a second safety
+  boundary if a page changes or does not identify itself as financial.
+- The popup clears the action list and announces the financial-page boundary
+  instead of offering a generic empty state. It cannot run a typed command
+  after that boundary is returned.
+- Added the explicit `financial-page-exclusion` claim and a financial fixture.
+  Its exact test drives both the serialized injected agent and the packaged
+  MV3 popup, proves **Transfer money** is neither listed nor clicked, and
+  asserts its click count stays zero.
+- Added the same plain-language limit to the landing page, Privacy, README,
+  and copy audit. Existing ordinary-page behavior, demo data, privacy model,
+  and Pro flow are unchanged.
 
-`src/lib/page-agent.ts` omits `transfer` from its sensitive-action regex. A
-real evaluation of the candidate's matching functions classified `Transfer
-money` as `destructive: false` and matched “click transfer money”. The popup
-therefore invokes the agent directly, and the agent calls `element.click()`
-without review. Banking pages are not excluded.
+## How to run and verify
 
-Fix by excluding banking/financial sites as required by the brief, or at a
-minimum review every money-moving label (transfer/wire/withdraw/deposit, etc.)
-with an independently tagged claim test. Re-run the complete verification
-after the fix.
+```sh
+npm ci
+npm test
+npm run lint
+npm run build
+npm run test:package
+npm run test:zip-contents
+npm run verify:live
+```
 
-See `.factory/verification-9.md` for exact evidence, commands, and severity.
+The new regression is:
+
+```sh
+npm test -- --grep @claim:financial-page-exclusion
+```
+
+## Verification evidence
+
+- Fresh `npm ci` completed with 0 reported package vulnerabilities.
+- `npm test` passed: 16 Vitest checks and 33 Playwright checks. All **19**
+  exact commands in `.factory/claims.json` also passed individually from the
+  clean install, including `@claim:financial-page-exclusion`.
+- `npm run typecheck`, `npm run lint`, `npm run build`, `npm run test:package`,
+  and `npm run test:zip-contents` passed. The consumer artifact is the MV3 ZIP
+  at `dist/site/downloads/speak-page-actions.zip`.
+- Browser coverage includes extension popup flows, desktop Chromium, 390×844
+  mobile layout, keyboard skip link plus Space/Enter push-to-talk, review
+  dialog, reduced motion, 44px targets, no overflow, and no console errors.
+- Accessibility: Playwright Axe found zero serious/critical findings on `/`,
+  `/demo`, `/privacy`, `/terms`, and 404 in light and dark themes. The worker
+  URL verifier passed locally and live: title, `lang`, one `h1`, `main`, image
+  alt text, labelled buttons, and no browser errors.
+- Privacy/offline/update coverage passed: same-origin demo requests, no page
+  labels/spoken commands/history requests, browser-local extension storage,
+  scrubbed website checkout tokens, offline demo reload, and old service-worker
+  cache removal.
+- A mobile Lighthouse artifact at
+  `/tmp/speak-page-actions-repair-lighthouse.json` recorded 100/100/100/100
+  for performance/accessibility/best-practices/SEO, 1,862 ms LCP, 0 CLS, and
+  170,909 B transfer. Chrome reported a screenshot-teardown crash only after
+  the audit results were written; the independent Playwright checks above
+  completed cleanly.
+- Production deployment used
+  `/opt/fleet/lib/deploy-static.sh speak-page-actions /work/repo/dist/site`
+  (Azure Static Web Apps deployment `541fa760-1146-4e6f-b5ed-c47415cf7300`).
+  `npm run verify:live` passed after deployment; it found 200 responses and
+  zero serious Axe findings on all four routes, offline demo reload, response
+  CSP with `frame-ancestors 'none'`, `Referrer-Policy: no-referrer`, no console
+  errors, and exact local/live hashes for site assets and all 23 ZIP members.
+  Evidence: `test-results/verify-live-repair-f9cf0a3/cold-check.json` and
+  `test-results/verify-url-live-f9cf0a3/verify.json`.
+
+## Known gaps and next steps
+
+No known product gaps. The product remains a desktop Chrome/Chromium MV3
+extension; mobile browsers are supported only for the isolated demo, as
+documented.
