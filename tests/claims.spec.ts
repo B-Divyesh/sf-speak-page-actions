@@ -143,6 +143,14 @@ test('@claim:demo-local keeps demo use local to this site', async ({ page }) => 
   expect(requests.every((url) => new URL(url).origin === 'http://127.0.0.1:4173')).toBe(true);
 });
 
+test('an empty demo command reports an input error without changing sample state', async ({ page }) => {
+  await page.goto('/demo');
+  await page.getByRole('button', { name: 'Run command' }).click();
+  await expect(page.locator('#demo-status')).toHaveText('Type a visible control name.');
+  await expect(page.getByRole('button', { name: 'Undo last page action' })).toBeHidden();
+  expect(await page.evaluate(() => Object.keys(localStorage).filter((key) => key.startsWith('demo:spa:')))).toEqual([]);
+});
+
 test('@claim:demo-isolation keeps real settings unchanged while sample data changes', async ({ page }) => {
   await page.goto('/demo');
   await page.evaluate(() => { localStorage.setItem('spa:real-setting', 'keep'); localStorage.setItem('sb_license:speak-page-actions', 'keep'); });
@@ -266,10 +274,57 @@ test('@claim:financial-page-exclusion does not list or operate banking and finan
 });
 
 test('@claim:visible-labels lists visible buttons, links, and labelled fields', async ({ page }) => {
-  await page.setContent('<main><button>Save address</button><a href="#review">Review order</a><label for="shipping">Shipping method</label><select id="shipping"><option>Standard</option></select><button style="display:none">Hidden action</button></main>');
+  await page.setContent(`<main>
+    <button>Save address</button>
+    <a href="#review">Review order</a>
+    <label for="shipping">Shipping method</label><select id="shipping"><option>Standard</option></select>
+    <button style="display:none">Display none action</button>
+    <button style="position:fixed;left:-500px">Offscreen action</button>
+    <button style="opacity:0">Transparent action</button>
+    <div style="opacity:0"><button>Ancestor transparent action</button></div>
+    <div aria-hidden="true"><button>Aria hidden action</button></div>
+    <button disabled>Disabled action</button>
+    <button aria-disabled="true">ARIA disabled action</button>
+    <div hidden><button>Ancestor hidden action</button></div>
+    <button style="width:0;height:0;padding:0;border:0">Zero-sized action</button>
+  </main>`);
   await installAgent(page);
   const result = await page.evaluate(() => (window as typeof window & { sendSpaMessage: (message: unknown) => Promise<{ actions: Array<{ label: string }> }> }).sendSpaMessage({ type: 'SPA_COLLECT' }));
   expect(result.actions.map((action) => action.label)).toEqual(['Save address', 'Review order', 'Shipping method']);
+});
+
+test('page actions are revalidated before activation and never report success for unavailable controls', async ({ page }) => {
+  const names = ['Offscreen', 'Transparent', 'Aria hidden', 'Disabled', 'ARIA disabled'];
+  await page.setContent(`<main>
+    <button data-spa-id="enabled">Enabled action</button>
+    ${names.map((name, index) => `<button data-spa-id="stale-${index}">${name} action</button>`).join('')}
+    <button data-spa-id="already-disabled" disabled>Already disabled action</button>
+  </main>`);
+  await page.evaluate(() => {
+    (window as any).__clicks = 0;
+    document.querySelectorAll('button').forEach((button) => button.addEventListener('click', () => (window as any).__clicks += 1));
+  });
+  await installAgent(page);
+  const collected = await page.evaluate(() => (window as any).sendSpaMessage({ type: 'SPA_COLLECT' }));
+  expect(collected.actions.map((action: { label: string }) => action.label)).toEqual(['Enabled action', ...names.map((name) => `${name} action`)]);
+  await page.evaluate(() => {
+    (document.querySelector('[data-spa-id="stale-0"]') as HTMLElement).style.position = 'fixed';
+    (document.querySelector('[data-spa-id="stale-0"]') as HTMLElement).style.left = '-500px';
+    (document.querySelector('[data-spa-id="stale-1"]') as HTMLElement).style.opacity = '0';
+    document.querySelector('[data-spa-id="stale-2"]')?.setAttribute('aria-hidden', 'true');
+    (document.querySelector('[data-spa-id="stale-3"]') as HTMLButtonElement).disabled = true;
+    document.querySelector('[data-spa-id="stale-4"]')?.setAttribute('aria-disabled', 'true');
+  });
+  const unavailable = await page.evaluate(async () => Promise.all(
+    [...Array(5)].map((_, index) => (window as any).sendSpaMessage({ type: 'SPA_ACTIVATE', id: `stale-${index}` })),
+  ));
+  expect(unavailable).toEqual(Array(5).fill({ ok: false, message: 'That action is no longer visible or available. Scan the page again.' }));
+  expect(await page.evaluate(() => (window as any).__clicks)).toBe(0);
+  const disabled = await page.evaluate(() => (window as any).sendSpaMessage({ type: 'SPA_ACTIVATE', id: 'already-disabled' }));
+  expect(disabled).toEqual({ ok: false, message: 'That action is no longer visible or available. Scan the page again.' });
+  const enabled = await page.evaluate(() => (window as any).sendSpaMessage({ type: 'SPA_ACTIVATE', id: 'enabled' }));
+  expect(enabled).toMatchObject({ ok: true, message: 'Used Enabled action.' });
+  expect(await page.evaluate(() => (window as any).__clicks)).toBe(1);
 });
 
 test('@claim:password-exclusion never lists a password field', async ({ page }) => {

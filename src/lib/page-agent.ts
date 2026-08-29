@@ -19,6 +19,7 @@ export function installPageAgent() {
   const financialHost = /(?:^|[.-])(?:bank|banking|creditunion|credit-union|financial|finance|finserv|brokerage|invest|trading|payments?|wallet)(?:[.-]|$)/i;
   const financialActionWords = /\b(?:transfer|wire|withdraw(?:al)?|deposit|cash out|send money|move money|pay bill|add payee|beneficiary)\b/i;
   const financialPageMessage = 'Speak Page Actions does not operate banking or financial pages.';
+  const unavailableActionMessage = 'That action is no longer visible or available. Scan the page again.';
   let undo: (() => boolean) | undefined;
 
   const labelFor = (element: HTMLElement) => {
@@ -37,10 +38,21 @@ export function installPageAgent() {
     }
     return (element.innerText || element.textContent || element.getAttribute('title') || '').replace(/\s+/g, ' ').trim();
   };
-  const isVisible = (element: HTMLElement) => {
+  const isAvailable = (element: HTMLElement) => {
+    if (element.closest('[hidden], [inert], [aria-hidden="true"], [aria-disabled="true"]') || element.matches(':disabled')) return false;
     const style = getComputedStyle(element);
     const rect = element.getBoundingClientRect();
-    return style.visibility !== 'hidden' && style.display !== 'none' && rect.width > 0 && rect.height > 0;
+    if (style.visibility === 'hidden' || style.display === 'none' || style.contentVisibility === 'hidden' || rect.width <= 0 || rect.height <= 0) return false;
+    if (rect.bottom <= 0 || rect.right <= 0 || rect.top >= innerHeight || rect.left >= innerWidth) return false;
+    for (let current: HTMLElement | null = element; current; current = current.parentElement) {
+      if (Number.parseFloat(getComputedStyle(current).opacity) === 0) return false;
+    }
+    return typeof element.checkVisibility !== 'function' || element.checkVisibility({
+      checkOpacity: true,
+      checkVisibilityCSS: true,
+      opacityProperty: true,
+      visibilityProperty: true,
+    });
   };
   const separatedWords = (label: string) => label
     .replace(/([a-z])([A-Z])/g, '$1 $2')
@@ -53,11 +65,11 @@ export function installPageAgent() {
   const isFinancialPage = () => {
     if (financialHost.test(location.hostname)) return true;
     const controls = [...document.querySelectorAll<HTMLElement>(selector)]
-      .filter(isVisible)
+      .filter(isAvailable)
       .map(labelFor);
     if (controls.some((label) => financialActionWords.test(separatedWords(label)))) return true;
     const headings = [...document.querySelectorAll<HTMLElement>('h1,h2,h3,[role="heading"]')]
-      .filter(isVisible)
+      .filter(isAvailable)
       .map((heading) => heading.innerText || heading.textContent || '');
     const description = document.querySelector('meta[name="description"]')?.getAttribute('content') || '';
     return financialContextWords.test(separatedWords([document.title, description, ...headings, ...controls].join(' ')));
@@ -74,7 +86,7 @@ export function installPageAgent() {
     return id;
   };
   const collect = () => [...document.querySelectorAll<HTMLElement>(selector)].flatMap((element, index) => {
-    if (!isVisible(element) || element.getAttribute('aria-hidden') === 'true' || element instanceof HTMLInputElement && element.type === 'password') return [];
+    if (!isAvailable(element) || element instanceof HTMLInputElement && element.type === 'password') return [];
     const label = labelFor(element);
     if (!label) return [];
     const clickableInput = element instanceof HTMLInputElement && ['button', 'submit', 'reset', 'checkbox', 'radio', 'image'].includes(element.type);
@@ -88,12 +100,14 @@ export function installPageAgent() {
   const activate = (id: string, confirmed = false) => {
     const element = document.querySelector<HTMLElement>(`[data-spa-id="${CSS.escape(id)}"]`);
     if (!element) return { ok: false, message: 'That action is no longer on this page. Scan the page again.' };
+    if (!isAvailable(element)) return { ok: false, message: unavailableActionMessage };
     const label = labelFor(element);
     const sensitive = needsReview(element, label);
     if (sensitive && !confirmed) return { ok: false, needsReview: true, message: `Review ${label} before using it.` };
     const clickableInput = element instanceof HTMLInputElement && ['button', 'submit', 'reset', 'checkbox', 'radio', 'image'].includes(element.type);
     if ((element instanceof HTMLInputElement && !clickableInput) || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement) {
       element.focus();
+      if (document.activeElement !== element) return { ok: false, message: unavailableActionMessage };
       return { ok: true, message: `Focused ${labelFor(element)}.` };
     }
     // A browser extension cannot honestly reverse a submitted form or a server

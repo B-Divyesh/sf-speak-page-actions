@@ -91,6 +91,7 @@ README string to appear in this file.
 | Type a command for the sample | 6 | label |
 | click save address | 3 | demo placeholder |
 | Run command | 2 | button |
+| Type a visible control name. | 5 | demo empty-command error |
 | No visible action matched. | 4 | demo error |
 | Use a label from the list. | 6 | demo error action |
 | The action was not used. | 5 | demo cancelled state |
@@ -152,6 +153,7 @@ README string to appear in this file.
 | Open a normal web page and try again. | 8 | popup error action |
 | The page changed before that action could run. | 8 | popup error |
 | Scan the page again. | 4 | popup error action |
+| That action is no longer visible or available. | 8 | extension unavailable-action error |
 | No visible action matched those words. | 6 | popup command error |
 | Say or type the label shown below. | 7 | popup command error action |
 | Paste your Pro license token. | 5 | popup license error |
