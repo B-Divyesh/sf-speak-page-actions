@@ -5,6 +5,12 @@
 .install{padding:44px 0;border-bottom:2px solid var(--ink)}
 .install h2{font-family:Georgia,ui-serif,serif;font-size:clamp(1.7rem,3vw,2.6rem);line-height:1.08;margin:0 0 10px}
 .install p{max-width:58ch}
+
+.desktop-note{max-width:58ch;margin:16px 0 0;font-size:14px;color:var(--muted)}
+.install ol{max-width:58ch;padding-left:24px;margin:20px 0 24px}
+.install li{margin:8px 0}
+.install code{background:var(--amber);color:var(--ink);padding:2px 5px}
+.checkout-note{font-size:14px;color:#d9e9d5}
 @media(max-width:700px){
   .site-header{padding:10px 16px;gap:2px}
   .site-header nav{gap:8px;justify-content:flex-start}

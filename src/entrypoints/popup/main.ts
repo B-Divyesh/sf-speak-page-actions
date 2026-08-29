@@ -12,7 +12,15 @@ const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as 
 const talk = $('talk') as HTMLButtonElement, command = $('command') as HTMLInputElement, status = $('status'), list = $('action-list'), empty = $('empty'), count = $('count'), review = $('review') as HTMLDialogElement, reviewCopy = $('review-copy'), undo = $('undo') as HTMLButtonElement, aliasTarget = $('alias-target') as HTMLSelectElement, aliasName = $('alias-name') as HTMLInputElement, licenseToken = $('license-token') as HTMLInputElement, aliasStatus = $('alias-status');
 let actions: PageAction[] = [], pending: PageAction | undefined, recognition: SpeechRecognitionLike | undefined, listening = false, ignoreTalkClick = false;
 
-async function activeTab() { const [tab] = await browser.tabs.query({ active: true, currentWindow: true }); if (!tab.id) throw new Error('No active page was found.'); return tab.id; }
+async function activeTab() {
+  const active = await browser.tabs.query({ active: true, currentWindow: true });
+  // A real action popup is not a browser tab. This fallback also avoids trying
+  // to inject into an extension tab when the popup is opened for inspection.
+  const tab = active.find((item) => /^https?:/.test(item.url || ''))
+    || (await browser.tabs.query({})).find((item) => /^https?:/.test(item.url || ''));
+  if (!tab?.id) throw new Error('No active web page was found.');
+  return tab.id;
+}
 async function pageMessage(message: object) {
   const tabId = await activeTab();
   await browser.scripting.executeScript({ target: { tabId }, func: installPageAgent });

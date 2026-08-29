@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Extension action fixture</title></head>
+  <body>
+    <main>
+      <h1>Sample checkout controls</h1>
+      <button id="save">Save address</button>
+      <a id="review" href="#review">Review order</a>
+      <label for="shipping">Shipping method</label><select id="shipping"><option>Standard</option></select>
+      <form id="publish-form"><button id="publish">Publish changes</button></form>
+      <ul><li id="draft"><button id="delete">Delete saved draft</button></li></ul>
+      <p id="result" role="status"></p>
+    </main>
+    <script>
+      const result = document.querySelector('#result');
+      document.querySelector('#save').addEventListener('click', () => { result.textContent = 'Saved address.'; });
+      document.querySelector('#review').addEventListener('click', (event) => { event.preventDefault(); result.textContent = 'Reviewed order.'; });
+      document.querySelector('#publish-form').addEventListener('submit', (event) => { event.preventDefault(); result.textContent = 'Published changes.'; });
+      document.querySelector('#delete').addEventListener('click', () => { document.querySelector('#draft').remove(); result.textContent = 'Deleted saved draft.'; });
+    </script>
+  </body>
+</html>

@@ -1,1 +1,1 @@
-Speak visible browser controls with a review before sensitive actions.
+Speak visible browser controls by voice or typing, with review before sensitive actions.
