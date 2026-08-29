@@ -9,7 +9,12 @@ export function installPageAgent() {
   page.__speakPageActionsInstalled = true;
 
   const selector = 'a[href],button,input:not([type="hidden"]):not([type="password"]),textarea,select,[role="button"],[role="link"]';
-  const destructiveWords = /\b(delete|remove|discard|destroy|publish|send|submit|pay|purchase|place order|sign out)\b/i;
+  // Be deliberately conservative here. These labels describe actions that can
+  // change an account, money, a subscription, or a record. A false positive
+  // costs one explicit confirmation; a false negative can be irreversible.
+  // Keep this policy mirrored in the landing page, Privacy page, README, and
+  // the destructive-review claim test.
+  const destructiveWords = /\b(?:delete|remove|discard|destroy|publish|send|submit|pay|purchase|place order|sign out|unsubscribe|archive|deactivate|close(?:\s+(?:my|your|the))?\s+account|cancel(?:\s+(?:my|your|the))?\s+(?:subscription|plan|membership)|end(?:\s+(?:my|your|the))?\s+(?:subscription|plan|membership)|terminate(?:\s+(?:my|your|the))?\s+account)\b/i;
   let undo: (() => boolean) | undefined;
 
   const labelFor = (element: HTMLElement) => {
@@ -33,6 +38,13 @@ export function installPageAgent() {
     const rect = element.getBoundingClientRect();
     return style.visibility !== 'hidden' && style.display !== 'none' && rect.width > 0 && rect.height > 0;
   };
+  const separatedWords = (label: string) => label
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/([A-Z])([A-Z][a-z])/g, '$1 $2');
+  const submitsForm = (element: HTMLElement) =>
+    (element instanceof HTMLButtonElement && element.type === 'submit' && Boolean(element.form))
+    || (element instanceof HTMLInputElement && ['submit', 'image'].includes(element.type) && Boolean(element.form));
+  const needsReview = (element: HTMLElement, label: string) => destructiveWords.test(separatedWords(label)) || submitsForm(element);
   const nodeId = (element: Element, index: number) => {
     const previous = element.getAttribute('data-spa-id');
     if (previous) return previous;
@@ -46,22 +58,17 @@ export function installPageAgent() {
     if (!label) return [];
     const clickableInput = element instanceof HTMLInputElement && ['button', 'submit', 'reset', 'checkbox', 'radio', 'image'].includes(element.type);
     const kind = element instanceof HTMLSelectElement ? 'select' : element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement ? (clickableInput ? 'button' : 'field') : element instanceof HTMLAnchorElement || element.getAttribute('role') === 'link' ? 'link' : 'button';
-    const separated = label.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/([A-Z])([A-Z][a-z])/g, '$1 $2');
     // HTML buttons submit their owner form by default, even with no `type`
     // attribute. Treat that browser behaviour (and image inputs) as sensitive,
     // rather than relying on the author having written type="submit".
-    const submitsForm = (element instanceof HTMLButtonElement && element.type === 'submit' && Boolean(element.form))
-      || (element instanceof HTMLInputElement && ['submit', 'image'].includes(element.type) && Boolean(element.form));
-    return [{ id: nodeId(element, index), label, kind, destructive: destructiveWords.test(separated) || submitsForm }];
+    return [{ id: nodeId(element, index), label, kind, destructive: needsReview(element, label) }];
   });
   const undoContainer = (element: HTMLElement) => element.closest<HTMLElement>('[data-spa-undoable], [role="listitem"], li, tr, article');
   const activate = (id: string, confirmed = false) => {
     const element = document.querySelector<HTMLElement>(`[data-spa-id="${CSS.escape(id)}"]`);
     if (!element) return { ok: false, message: 'That action is no longer on this page. Scan the page again.' };
-    const submitsForm = (element instanceof HTMLButtonElement && element.type === 'submit' && Boolean(element.form))
-      || (element instanceof HTMLInputElement && ['submit', 'image'].includes(element.type) && Boolean(element.form));
     const label = labelFor(element);
-    const sensitive = destructiveWords.test(label.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/([A-Z])([A-Z][a-z])/g, '$1 $2')) || submitsForm;
+    const sensitive = needsReview(element, label);
     if (sensitive && !confirmed) return { ok: false, needsReview: true, message: `Review ${label} before using it.` };
     const clickableInput = element instanceof HTMLInputElement && ['button', 'submit', 'reset', 'checkbox', 'radio', 'image'].includes(element.type);
     if ((element instanceof HTMLInputElement && !clickableInput) || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement) {

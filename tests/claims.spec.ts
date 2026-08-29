@@ -189,31 +189,51 @@ test('@claim:typed-command runs a visible control through the packaged extension
   } finally { await context.close(); }
 });
 
-test('@claim:destructive-review requires review before submit, delete, publish, send, and pay actions', async ({ page }) => {
-  await page.setContent('<main><form><button id="implicit">Save changes</button><button id="explicit" type="submit">Publish changes</button></form><button>Delete saved draft</button><button>Send message</button><button>Pay now</button></main>');
+test('@claim:destructive-review requires review before every documented sensitive action', async ({ page }) => {
+  const labels = [
+    'Save changes', 'Publish changes', 'Delete saved draft', 'Send message', 'Pay now',
+    'Cancel subscription', 'Unsubscribe', 'Archive conversation', 'Deactivate account',
+    'Close your account', 'Sign out',
+  ];
+  await page.setContent('<main><form><button>Save changes</button><button type="submit">Publish changes</button></form><button>Delete saved draft</button><button>Send message</button><button>Pay now</button><button>Cancel subscription</button><button>Unsubscribe</button><button>Archive conversation</button><button>Deactivate account</button><button>Close your account</button><button>Sign out</button></main>');
+  await page.evaluate((sensitiveLabels) => {
+    (window as any).__activated = [];
+    document.querySelectorAll('button').forEach((button) => button.addEventListener('click', () => (window as any).__activated.push(button.textContent?.trim())));
+    document.querySelector('form')?.addEventListener('submit', (event) => event.preventDefault());
+    (window as any).__sensitiveLabels = sensitiveLabels;
+  }, labels);
   await installAgent(page);
-  await page.evaluate(() => document.querySelector('form')?.addEventListener('submit', (event) => { event.preventDefault(); (window as any).__submits = ((window as any).__submits || 0) + 1; }));
   const result = await page.evaluate(() => (window as typeof window & { sendSpaMessage: (message: unknown) => Promise<{ actions: Array<{ id: string; label: string; destructive: boolean }> }>; }).sendSpaMessage({ type: 'SPA_COLLECT' }));
-  expect(result.actions.find((action) => action.label === 'Save changes')?.destructive).toBe(true);
-  expect(result.actions.find((action) => action.label === 'Publish changes')?.destructive).toBe(true);
-  expect(result.actions.find((action) => action.label === 'Delete saved draft')?.destructive).toBe(true);
-  expect(result.actions.find((action) => action.label === 'Send message')?.destructive).toBe(true);
-  expect(result.actions.find((action) => action.label === 'Pay now')?.destructive).toBe(true);
-  for (const action of result.actions) {
+  const sensitiveActions = labels.map((label) => result.actions.find((action) => action.label === label)!);
+  expect(sensitiveActions.every((action) => action?.destructive)).toBe(true);
+  for (const action of sensitiveActions) {
     const blocked = await page.evaluate((id) => (window as any).sendSpaMessage({ type: 'SPA_ACTIVATE', id }), action.id);
     expect(blocked.needsReview).toBe(true);
   }
-  expect(await page.evaluate(() => (window as any).__submits || 0)).toBe(0);
-  const implicit = result.actions.find((action) => action.label === 'Save changes')!;
-  await page.evaluate((id) => (window as any).sendSpaMessage({ type: 'SPA_ACTIVATE', id, confirmed: true }), implicit.id);
-  expect(await page.evaluate(() => (window as any).__submits)).toBe(1);
+  expect(await page.evaluate(() => (window as any).__activated)).toEqual([]);
+  for (const action of sensitiveActions) await page.evaluate((id) => (window as any).sendSpaMessage({ type: 'SPA_ACTIVATE', id, confirmed: true }), action.id);
+  expect(await page.evaluate(() => (window as any).__activated)).toEqual(labels);
+
   const { context, popup, fixture } = await extensionPopup();
   try {
-    await popup.getByRole('button', { name: /Publish changes/ }).click();
-    await expect(popup.getByRole('dialog')).toBeVisible();
-    await expect(fixture.locator('#result')).toBeEmpty();
-    await popup.getByRole('button', { name: 'Use action' }).click();
-    await expect(fixture.locator('#result')).toHaveText('Published changes.');
+    const popupCases = [
+      ['Publish changes', 'Published changes.'],
+      ['Cancel subscription', 'Cancelled subscription.'],
+      ['Unsubscribe', 'Unsubscribed.'],
+      ['Archive conversation', 'Archived conversation.'],
+      ['Deactivate account', 'Deactivated account.'],
+      ['Close your account', 'Closed account.'],
+      ['Sign out', 'Signed out.'],
+    ];
+    for (const [label, expected] of popupCases) {
+      await fixture.locator('#result').evaluate((element) => { element.textContent = ''; });
+      await popup.getByRole('button', { name: new RegExp(label) }).click();
+      await expect(popup.getByRole('dialog')).toBeVisible();
+      await expect(fixture.locator('#result')).toHaveText('');
+      await popup.getByRole('button', { name: 'Use action' }).click();
+      await expect(fixture.locator('#result')).toHaveText(expected);
+      await expect(popup.getByRole('dialog')).toBeHidden();
+    }
   } finally { await context.close(); }
 });
 

@@ -9,6 +9,12 @@
       <label for="shipping">Shipping method</label><select id="shipping"><option>Standard</option></select>
       <form id="publish-form"><button id="publish">Publish changes</button></form>
       <ul><li id="draft"><button id="delete">Delete saved draft</button></li></ul>
+      <button id="cancel-subscription">Cancel subscription</button>
+      <button id="unsubscribe">Unsubscribe</button>
+      <button id="archive">Archive conversation</button>
+      <button id="deactivate">Deactivate account</button>
+      <button id="close-account">Close your account</button>
+      <button id="sign-out">Sign out</button>
       <p id="result" role="status"></p>
     </main>
     <script>
@@ -17,6 +23,12 @@
       document.querySelector('#review').addEventListener('click', (event) => { event.preventDefault(); result.textContent = 'Reviewed order.'; });
       document.querySelector('#publish-form').addEventListener('submit', (event) => { event.preventDefault(); result.textContent = 'Published changes.'; });
       document.querySelector('#delete').addEventListener('click', () => { document.querySelector('#draft').remove(); result.textContent = 'Deleted saved draft.'; });
+      document.querySelector('#cancel-subscription').addEventListener('click', () => { result.textContent = 'Cancelled subscription.'; });
+      document.querySelector('#unsubscribe').addEventListener('click', () => { result.textContent = 'Unsubscribed.'; });
+      document.querySelector('#archive').addEventListener('click', () => { result.textContent = 'Archived conversation.'; });
+      document.querySelector('#deactivate').addEventListener('click', () => { result.textContent = 'Deactivated account.'; });
+      document.querySelector('#close-account').addEventListener('click', () => { result.textContent = 'Closed account.'; });
+      document.querySelector('#sign-out').addEventListener('click', () => { result.textContent = 'Signed out.'; });
     </script>
   </body>
 </html>

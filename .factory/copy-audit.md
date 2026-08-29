@@ -1,4 +1,4 @@
-# Copy audit — polish 3
+# Copy audit — polish 4
 
 Count rule: whitespace-delimited tokens. Punctuation, hyphenated forms, URLs,
 paths, and `$12` count as one word. This audit covers rendered sentences,
@@ -47,7 +47,7 @@ README string to appear in this file.
 | Hold to speak. | 3 | step |
 | Speak when your browser can process speech on this device, or type the visible control name. | 16 | `on-device-speech`, `typed-command` |
 | Review sensitive actions. | 3 | step |
-| It asks before actions that submit, delete, publish, send, or pay. | 11 | `destructive-review` |
+| It asks before submitting, deleting, publishing, sending, paying, canceling subscriptions, unsubscribing, archiving, deactivating, closing accounts, or signing out. | 18 | `destructive-review` |
 | What it does not do | 5 | h2 |
 | It does not listen in the background. | 7 | limit |
 | It never lists password fields. | 5 | `password-exclusion` |
@@ -102,6 +102,8 @@ README string to appear in this file.
 | It does not read password fields. | 6 | `password-exclusion` |
 | What stays on your device | 5 | privacy h2 |
 | What the extension sends | 4 | privacy h2 |
+| Sensitive action review | 3 | privacy h2 |
+| Review is required for submitting, deleting, publishing, sending, paying, canceling subscriptions, unsubscribing, archiving, deactivating, closing accounts, and signing out. | 19 | `destructive-review` |
 | Demo data | 2 | privacy h2 |
 | Its sample changes use separate browser storage. | 7 | `demo-isolation` |
 | Using the extension | 3 | terms h2 |
@@ -187,7 +189,7 @@ README string to appear in this file.
 | The extension scans only the current page after you open it. | 11 | README, `active-tab-only` |
 | Hold the speak button and say a visible control name, such as “click save address.” | 15 | README |
 | Hold Space or Enter to speak; release the key to stop. | 11 | README |
-| It asks before controls that may publish, submit, delete, pay, or send. | 12 | README, `destructive-review` |
+| It asks before submitting, deleting, publishing, sending, paying, canceling subscriptions, unsubscribing, archiving, deactivating, closing accounts, or signing out. | 18 | README, `destructive-review` |
 | Password fields are never listed. | 5 | README, `password-exclusion` |
 | Try four sample controls at the one-click demo. | 8 | README |
 | Sample changes use separate browser storage and do not change extension settings. | 12 | README, `demo-isolation` |

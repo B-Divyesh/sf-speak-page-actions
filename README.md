@@ -2,7 +2,7 @@
 
 Speak visible browser controls on an ordinary page. It is for people with limited vision or hand mobility who want to say or type a control name.
 
-The extension scans only the current page after you open it. Hold the speak button and say a visible control name, such as “click save address.” Hold Space or Enter to speak; release the key to stop. It asks before controls that may publish, submit, delete, pay, or send. Password fields are never listed.
+The extension scans only the current page after you open it. Hold the speak button and say a visible control name, such as “click save address.” Hold Space or Enter to speak; release the key to stop. It asks before submitting, deleting, publishing, sending, paying, canceling subscriptions, unsubscribing, archiving, deactivating, closing accounts, or signing out. Password fields are never listed.
 
 Try four sample controls at [the one-click demo](https://speak-page-actions.sociobot.in/?demo=1). Sample changes use separate browser storage and do not change extension settings. Keys start with `demo:spa:` for verification.
 
