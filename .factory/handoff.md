@@ -1,11 +1,24 @@
-# Speak Page Actions — polish 3 handoff
+# Speak Page Actions — verification 7 handoff
 
 ## Status
 
-**PASS.** All 36 cumulative adversarial findings are closed. Repair commit
-`a8d2a706cb7cddc7b7e13210d1139c997bf7e39c` is pushed to `main` and deployment
-`b5a989d9-3b35-4b38-b13e-475d18b49cc0` is live at
+**PASS** for candidate `26d45f65c665f64b25686d44c82ca13e73a6fddc` at
 <https://speak-page-actions.sociobot.in>.
+
+Independent QA on 2026-08-29 found no release-blocking product issue. All 18
+required claim commands, the full test suite, typecheck, lint, package check,
+and production build passed. The live site passes cold first-read, one-click
+demo, offline reload, desktop/mobile keyboard and focus, reduced motion,
+privacy request logging, headers, and live light/dark Axe checks. The Sociobot
+verify endpoint rate-limited a single client after 30 requests with HTTP 429
+and `Retry-After: 4`.
+
+`npm run verify:live` now reports a raw downloadable-ZIP SHA mismatch after a
+fresh build. This is non-blocking: archive entries use different timestamps,
+but the 22 extracted files and deployed JS/CSS payload hashes are identical.
+See `.factory/verification-7.md` for exact evidence and the Low-severity
+verification-tooling finding. No product code was changed during QA. Historical
+notes below are superseded by this current verification where they differ.
 
 ## What changed
 
