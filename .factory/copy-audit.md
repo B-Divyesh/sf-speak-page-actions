@@ -5,8 +5,9 @@
 | Speak the action you need | 5 | pass |
 | For people with limited vision or hand mobility, it turns visible page labels into reviewable voice actions. | 16 | pass |
 | Opens a safe sample page in one click. | 8 | pass |
-| On-device speech or typed commands | 5 | pass |
-| Visible labels only | 3 | pass |
+| Page labels stay in your browser | 6 | pass |
+| Works offline after the first visit | 6 | pass |
+| Core actions stay free; Pro aliases cost $12 once | 9 | pass |
 | It reads buttons, links, and labelled fields already visible on the current page. | 13 | pass |
 | It scans the active page only. | 6 | pass |
 | Use on-device speech, or type a label you can review. | 10 | pass |

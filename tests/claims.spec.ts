@@ -95,6 +95,8 @@ test('@claim:demo-local keeps demo use local to this site', async ({ page }) => 
 });
 
 test('@claim:offline-reload works offline after the first visit', async ({ context, page }) => {
+  await page.goto('/');
+  await expect(page.getByRole('list', { name: 'Product facts' })).toContainText('Works offline after the first visit');
   await page.goto('/demo');
   await page.waitForFunction(() => navigator.serviceWorker?.controller !== null);
   await page.reload();
@@ -162,14 +164,24 @@ test('@claim:push-to-talk starts speech only from an explicit hold action', asyn
   expect(popupCode).not.toContain('setInterval(');
 });
 
-test('@claim:pro-aliases exposes the one-time $12 alias license and restore control', async ({ page }) => {
+test('@claim:pro-aliases exposes a working hosted one-time $12 alias checkout and restore control', async ({ page, request }) => {
   await page.goto('/');
+  await expect(page.getByRole('list', { name: 'Product facts' })).toContainText('Pro aliases cost $12 once');
   await expect(page.getByRole('link', { name: 'Buy a $12 pro license' })).toHaveAttribute('href', 'https://api.sociobot.in/api/v1/products/speak-page-actions/checkout');
   await page.getByRole('button', { name: 'Have a license? Paste it' }).click();
   await expect(page.getByLabel('License token')).toBeVisible();
+  const checkout = await request.get('https://api.sociobot.in/api/v1/products/speak-page-actions/checkout');
+  expect(checkout.status()).toBe(200);
+  expect(new URL(checkout.url()).hostname).toBe('checkout.dodopayments.com');
+  const checkoutPage = await checkout.text();
+  expect(checkoutPage).toContain('pdt_0NmQKji0raDAsy6yS95UP');
+  expect(checkoutPage).toContain('Speak Page Actions');
+  expect(checkoutPage).toContain('$12.00');
 });
 
 test('@claim:core-free runs the sample command without a license token', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByRole('list', { name: 'Product facts' })).toContainText('Core actions stay free');
   await page.goto('/demo');
   await page.getByLabel('Type a command for the sample').fill('click save address');
   await page.getByRole('button', { name: 'Run command' }).click();
@@ -177,7 +189,9 @@ test('@claim:core-free runs the sample command without a license token', async (
   expect(await page.evaluate(() => localStorage.getItem('sb_license:speak-page-actions'))).toBeNull();
 });
 
-test('@claim:page-data-local keeps the injected page agent free of network calls', async () => {
+test('@claim:page-data-local keeps the injected page agent free of network calls', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByRole('list', { name: 'Product facts' })).toContainText('Page labels stay in your browser');
   const agent = installPageAgent.toString();
   expect(agent).not.toContain('fetch(');
   expect(agent).not.toContain('XMLHttpRequest');
@@ -215,4 +229,20 @@ test('service worker removes old named caches on activation', async ({ page }) =
   await page.reload();
   await page.waitForFunction(() => navigator.serviceWorker?.controller !== null);
   await expect.poll(() => page.evaluate(() => caches.keys())).not.toContain('speak-page-actions-v2');
+});
+
+test('release response-header CSP prevents framing', async () => {
+  const config = JSON.parse(readFileSync('dist/site/staticwebapp.config.json', 'utf8'));
+  const csp = config.globalHeaders?.['Content-Security-Policy'] || '';
+  expect(csp).toMatch(/(^|;)\s*frame-ancestors 'none'\s*(;|$)/);
+  expect(readFileSync('dist/site/index.html', 'utf8')).not.toContain('http-equiv="Content-Security-Policy"');
+});
+
+test('landing first screen presents exactly three privacy, offline, and price facts', async ({ page }) => {
+  await page.goto('/');
+  const facts = page.getByRole('list', { name: 'Product facts' }).getByRole('listitem');
+  await expect(facts).toHaveCount(3);
+  await expect(facts.nth(0)).toHaveText('Page labels stay in your browser');
+  await expect(facts.nth(1)).toHaveText('Works offline after the first visit');
+  await expect(facts.nth(2)).toHaveText('Core actions stay free; Pro aliases cost $12 once');
 });

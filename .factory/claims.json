@@ -16,7 +16,7 @@
   {
     "id": "offline-reload",
     "claim": "Works offline after the first visit",
-    "where": "README",
+    "where": "landing facts, README",
     "test": "npm test -- --grep @claim:offline-reload",
     "sandbox": "fresh browser context; visit demo, wait for service worker, set context offline, reload demo"
   },
@@ -72,21 +72,21 @@
   {
     "id": "pro-aliases",
     "claim": "A $12 one-time Pro license adds local command aliases",
-    "where": "pricing section, README",
+    "where": "landing facts, pricing section, README",
     "test": "npm test -- --grep @claim:pro-aliases",
-    "sandbox": "landing page; assert checkout link, $12 label, and restore-license control"
+    "sandbox": "landing page plus live checkout; assert first-screen $12 fact, restore-license control, HTTP 200 Dodo page, approved product ID, name, and $12.00 total"
   },
   {
     "id": "core-free",
     "claim": "Core page actions and safety checks stay free",
-    "where": "pricing section",
+    "where": "landing facts, pricing section",
     "test": "npm test -- --grep @claim:core-free",
     "sandbox": "fresh demo browser storage; run Save address and assert it works with no saved license token"
   },
   {
     "id": "page-data-local",
     "claim": "Page labels stay in your browser",
-    "where": "Privacy",
+    "where": "landing facts, Privacy",
     "test": "npm test -- --grep @claim:page-data-local",
     "sandbox": "inspect the injected page agent used for collection and activation; assert it contains no network API"
   }
