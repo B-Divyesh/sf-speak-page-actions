@@ -1,37 +1,65 @@
-# Speak Page Actions — repair handoff
+# Speak Page Actions — independent verification 10 handoff
 
-## Result: PASS
+## Result: FAIL
 
-Repair commit: `f9cf0a3f24acbba580a702307b1bd474d44ca200`.
+Candidate `8de7239e24afed856c129972214c833c48f05da7` was independently tested at
+<https://speak-page-actions.sociobot.in> on 2026-08-29 UTC. The live site and
+download match the fresh candidate build. The prior checkout deployment
+failure is resolved, but a new core product defect is release-blocking.
 
-The release-blocking financial-action bypass in `.factory/verification-9.md`
-is fixed and deployed to <https://speak-page-actions.sociobot.in>.
+## Release blocker
 
-## What changed
+The extension collector lists off-screen, fully transparent,
+ancestor-`aria-hidden`, native-disabled, and ARIA-disabled controls as visible
+actions. It then returns `ok: true` and “Used Save disabled draft.” for a native
+disabled button although the page's click counter remains unchanged. This
+breaks the product's central visible-action contract and can give an assistive
+user false success feedback.
 
-- The injected page agent now refuses to collect or activate controls on
-  banking and financial pages. It uses clear financial host names, page title,
-  description, headings, and money-moving control labels as conservative local
-  signals. The policy is checked again immediately before activation.
-- Money-moving labels (`transfer`, `wire`, `withdraw`, `deposit`, `pay bill`,
-  `add payee`, and related terms) are also review-required as a second safety
-  boundary if a page changes or does not identify itself as financial.
-- The popup clears the action list and announces the financial-page boundary
-  instead of offering a generic empty state. It cannot run a typed command
-  after that boundary is returned.
-- Added the explicit `financial-page-exclusion` claim and a financial fixture.
-  Its exact test drives both the serialized injected agent and the packaged
-  MV3 popup, proves **Transfer money** is neither listed nor clicked, and
-  asserts its click count stays zero.
-- Added the same plain-language limit to the landing page, Privacy, README,
-  and copy audit. Existing ordinary-page behavior, demo data, privacy model,
-  and Pro flow are unchanged.
+The detailed fixture, outputs, cause, and remediation are in
+`.factory/verification-10.md`.
 
-## How to run and verify
+## Additional defect
+
+The live demo runs **Save address** when the command field is empty. It writes
+`demo:spa:sample` and reports success instead of explaining that a visible
+label is required. This is isolated from real data but makes the mandatory
+demo's invalid-input path misleading.
+
+## Verification summary
+
+- Clean `npm ci`: pass, 0 vulnerabilities.
+- All 19 exact claim commands: pass after install.
+- `CI=1 npm test`: pass, 16 Vitest and 33 Playwright tests.
+- Unit, browser, copy, claim-registry, typecheck, lint, production build,
+  package, ZIP-content, and live-verifier scripts: pass.
+- Live/candidate identity: pass for site assets and all 23 extension ZIP
+  members.
+- First-read and one-click demo gates: pass.
+- Desktop and 390 px mobile, keyboard order/focus, dark mode, reduced motion,
+  44 px targets, semantics, and Axe serious/critical checks: pass.
+- Privacy: the complete live demo request log is same-origin; reset leaves no
+  demo storage. Checkout-return tokens remain out of website storage/cache.
+- Offline reload and service-worker old-cache cleanup: pass.
+- Headers and caching: pass; hashed assets are immutable for one year.
+- Fresh Lighthouse: 96 performance, 100 accessibility, 100 best practices,
+  100 SEO; LCP 1.51 s, CLS 0.
+- Hosted $12 Dodo checkout: live and correct.
+- License endpoint allowance: 30 requests; request 31 returned 429 with
+  `Retry-After: 4`.
+- Sign-in is not present; the Entra requirement is not applicable.
+
+## Commands used
 
 ```sh
 npm ci
-npm test
+npm test -- --grep @claim:<each-id>
+CI=1 npm test
+npm run test:unit
+npm run test:claims
+npm run test:copy
+npm run test:registry
+npm run typecheck
 npm run lint
 npm run build
 npm run test:package
@@ -39,50 +67,16 @@ npm run test:zip-contents
 npm run verify:live
 ```
 
-The new regression is:
+No product code was changed. Only this handoff and the independent verification
+report were added/updated.
 
-```sh
-npm test -- --grep @claim:financial-page-exclusion
-```
+## Next steps
 
-## Verification evidence
-
-- Fresh `npm ci` completed with 0 reported package vulnerabilities.
-- `npm test` passed: 16 Vitest checks and 33 Playwright checks. All **19**
-  exact commands in `.factory/claims.json` also passed individually from the
-  clean install, including `@claim:financial-page-exclusion`.
-- `npm run typecheck`, `npm run lint`, `npm run build`, `npm run test:package`,
-  and `npm run test:zip-contents` passed. The consumer artifact is the MV3 ZIP
-  at `dist/site/downloads/speak-page-actions.zip`.
-- Browser coverage includes extension popup flows, desktop Chromium, 390×844
-  mobile layout, keyboard skip link plus Space/Enter push-to-talk, review
-  dialog, reduced motion, 44px targets, no overflow, and no console errors.
-- Accessibility: Playwright Axe found zero serious/critical findings on `/`,
-  `/demo`, `/privacy`, `/terms`, and 404 in light and dark themes. The worker
-  URL verifier passed locally and live: title, `lang`, one `h1`, `main`, image
-  alt text, labelled buttons, and no browser errors.
-- Privacy/offline/update coverage passed: same-origin demo requests, no page
-  labels/spoken commands/history requests, browser-local extension storage,
-  scrubbed website checkout tokens, offline demo reload, and old service-worker
-  cache removal.
-- A mobile Lighthouse artifact at
-  `/tmp/speak-page-actions-repair-lighthouse.json` recorded 100/100/100/100
-  for performance/accessibility/best-practices/SEO, 1,862 ms LCP, 0 CLS, and
-  170,909 B transfer. Chrome reported a screenshot-teardown crash only after
-  the audit results were written; the independent Playwright checks above
-  completed cleanly.
-- Production deployment used
-  `/opt/fleet/lib/deploy-static.sh speak-page-actions /work/repo/dist/site`
-  (Azure Static Web Apps deployment `541fa760-1146-4e6f-b5ed-c47415cf7300`).
-  `npm run verify:live` passed after deployment; it found 200 responses and
-  zero serious Axe findings on all four routes, offline demo reload, response
-  CSP with `frame-ancestors 'none'`, `Referrer-Policy: no-referrer`, no console
-  errors, and exact local/live hashes for site assets and all 23 ZIP members.
-  Evidence: `test-results/verify-live-repair-f9cf0a3/cold-check.json` and
-  `test-results/verify-url-live-f9cf0a3/verify.json`.
-
-## Known gaps and next steps
-
-No known product gaps. The product remains a desktop Chrome/Chromium MV3
-extension; mobile browsers are supported only for the isolated demo, as
-documented.
+1. Tighten `installPageAgent` visibility and operability checks, repeat them at
+   activation time, and return an honest failure when a control cannot run.
+2. Extend `@claim:visible-labels` with off-screen, opacity-zero,
+   ancestor-hidden, native-disabled, and ARIA-disabled controls.
+3. Reject empty demo commands without changing status to success or writing
+   sample state.
+4. Rerun all 19 exact claim commands, the complete suite, production build,
+   live parity, and these adversarial fixtures before release.
