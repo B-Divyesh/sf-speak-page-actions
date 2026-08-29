@@ -1,4 +1,4 @@
-# Copy audit — polish 5
+# Copy audit — polish 6
 
 Count rule: whitespace-delimited tokens. Punctuation, hyphenated forms, URLs,
 paths, and `$12` count as one word. This audit covers rendered sentences,
@@ -51,7 +51,8 @@ README string to appear in this file.
 | What it does not do | 5 | h2 |
 | It does not listen in the background. | 7 | limit |
 | It never lists password fields. | 5 | `password-exclusion` |
-| It does not operate banking or financial pages. | 8 | `financial-page-exclusion` |
+| It blocks pages when the address, headings, or visible controls contain familiar finance words, or a sign-in form is present. | 20 | `financial-signal-block` |
+| Do not use it on other banking or financial pages. | 10 | finance limit |
 | Install on desktop Chrome or Chromium | 6 | h2 |
 | Mobile browsers cannot install this extension. | 6 | `desktop-chromium-only` |
 | You can still use the demo on this device. | 9 | `desktop-chromium-only` |
@@ -103,11 +104,15 @@ README string to appear in this file.
 | What the extension reads | 4 | privacy h2 |
 | It does not read password fields. | 6 | `password-exclusion` |
 | What stays on your device | 5 | privacy h2 |
+| Saved command names and license data use browser-local extension storage. | 10 | `extension-local-storage` |
+| A checkout return can put a token in the address bar. | 11 | `extension-local-storage` |
+| The page removes it without saving it in browser storage. | 10 | `extension-local-storage` |
 | What the extension sends | 4 | privacy h2 |
 | Sensitive action review | 3 | privacy h2 |
 | Review is required for submitting, deleting, publishing, sending, paying, canceling subscriptions, unsubscribing, archiving, deactivating, closing accounts, and signing out. | 19 | `destructive-review` |
 | Financial pages | 2 | privacy h2 |
-| The extension does not operate banking or financial pages. | 9 | `financial-page-exclusion` |
+| It blocks pages when the address, headings, or visible controls contain familiar finance words, or a sign-in form is present. | 20 | `financial-signal-block` |
+| Do not use it on other banking or financial pages. | 10 | finance limit |
 | Demo data | 2 | privacy h2 |
 | Its sample changes use separate browser storage. | 7 | `demo-isolation` |
 | Using the extension | 3 | terms h2 |
@@ -183,15 +188,14 @@ README string to appear in this file.
 | Push-to-talk only. | 2 | popup footer |
 | Password fields are never listed. | 5 | popup footer, `password-exclusion` |
 | The extension reads visible labels, roles, and control types on the current page after you open it. | 17 | privacy |
-| Saved command names and license data are stored in browser-local extension storage. | 12 | `extension-local-storage` |
-| The website does not store license tokens. | 7 | `extension-local-storage` |
 | The extension does not send page labels, spoken commands, or browsing history. | 12 | `page-data-local` |
 | When you restore Pro, it sends the license token to Sociobot for verification. | 13 | `license-verification` |
 | The demo requests stay on this site. | 7 | `demo-local` |
 | Pro is a one-time $12 license for saved command names. | 10 | `pro-aliases` |
 | Browser pages change often. | 4 | terms |
 | The extension may not identify every control or undo actions after a page navigates. | 14 | terms |
-| Speak Page Actions does not operate banking or financial pages. | 10 | extension financial-page status |
+| A finance or sign-in safety signal was found. | 8 | extension financial-signal status |
+| This page cannot be scanned. | 5 | extension financial-signal status |
 | Speak visible browser controls on an ordinary page. | 8 | README |
 | It is for people with limited vision or hand mobility who want to say or type a control name. | 19 | README |
 | The extension scans only the current page after you open it. | 11 | README, `active-tab-only` |
@@ -199,7 +203,8 @@ README string to appear in this file.
 | Hold Space or Enter to speak; release the key to stop. | 11 | README |
 | It asks before submitting, deleting, publishing, sending, paying, canceling subscriptions, unsubscribing, archiving, deactivating, closing accounts, or signing out. | 18 | README, `destructive-review` |
 | Password fields are never listed. | 5 | README, `password-exclusion` |
-| It does not operate banking or financial pages. | 8 | README, `financial-page-exclusion` |
+| It blocks pages when the address, headings, or visible controls contain familiar finance words, or a sign-in form is present. | 20 | README, `financial-signal-block` |
+| Do not use it on other banking or financial pages. | 10 | README finance limit |
 | Try four sample controls at the one-click demo. | 8 | README |
 | Sample changes use separate browser storage and do not change extension settings. | 12 | README, `demo-isolation` |
 | Keys start with demo:spa: for verification. | 6 | README |
@@ -222,7 +227,8 @@ README string to appear in this file.
 | Open the extension on a normal page. | 7 | README |
 | Open Restore Pro and save command names. | 7 | README |
 | Paste your license token, then choose Restore Pro. | 8 | README |
-| The website does not store license tokens. | 7 | README, `extension-local-storage` |
+| A checkout return can put a token in the address bar. | 11 | README, `extension-local-storage` |
+| The page removes it without saving it in browser storage. | 10 | README, `extension-local-storage` |
 
 ## Terminology
 

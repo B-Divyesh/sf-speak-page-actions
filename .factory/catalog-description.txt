@@ -1,1 +1,1 @@
-Speak or type a visible browser control, with review before sensitive actions.
+Use your voice or keyboard to activate visible browser controls with review before sensitive clicks.

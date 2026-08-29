@@ -11,7 +11,7 @@ type SpeechRecognitionErrorLike = { error: string };
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const talk = $('talk') as HTMLButtonElement, command = $('command') as HTMLInputElement, status = $('status'), list = $('action-list'), empty = $('empty'), count = $('count'), review = $('review') as HTMLDialogElement, reviewCopy = $('review-copy'), confirmAction = $('confirm') as HTMLButtonElement, undo = $('undo') as HTMLButtonElement, aliasTarget = $('alias-target') as HTMLSelectElement, aliasName = $('alias-name') as HTMLInputElement, licenseToken = $('license-token') as HTMLInputElement, licenseStatus = $('license-status'), aliasStatus = $('alias-status');
 const defaultConfirmLabel = 'Confirm action';
-const financialPageMessage = 'Speak Page Actions does not operate banking or financial pages.';
+const financialPageMessage = 'A finance or sign-in safety signal was found. This page cannot be scanned.';
 let actions: PageAction[] = [], pending: PageAction | undefined, recognition: SpeechRecognitionLike | undefined, listening = false, ignoreTalkClick = false, pageBlocked = false;
 
 async function activeTab() {

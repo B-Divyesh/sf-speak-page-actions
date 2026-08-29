@@ -264,7 +264,7 @@ test('@claim:destructive-review requires review before every documented sensitiv
   } finally { await context.close(); }
 });
 
-test('@claim:financial-page-exclusion does not list or operate banking and financial page controls', async ({ page }) => {
+test('@claim:financial-signal-block blocks familiar finance signals and sign-in forms without claiming every financial page', async ({ page }) => {
   await page.setContent('<main><h1>Bank account transfer</h1><button data-spa-id="transfer-money">Transfer money</button><p id="result"></p></main>');
   await page.evaluate(() => {
     (window as any).__transferCount = 0;
@@ -272,20 +272,46 @@ test('@claim:financial-page-exclusion does not list or operate banking and finan
   });
   await installAgent(page);
   const collected = await page.evaluate(() => (window as typeof window & { sendSpaMessage: (message: unknown) => Promise<{ actions: unknown[]; blocked?: boolean; message?: string }> }).sendSpaMessage({ type: 'SPA_COLLECT' }));
-  expect(collected).toMatchObject({ actions: [], blocked: true, message: 'Speak Page Actions does not operate banking or financial pages.' });
+  expect(collected).toMatchObject({ actions: [], blocked: true, message: 'A finance or sign-in safety signal was found. This page cannot be scanned.' });
   const blocked = await page.evaluate(() => (window as typeof window & { sendSpaMessage: (message: unknown) => Promise<{ ok: boolean; blocked?: boolean; message?: string }> }).sendSpaMessage({ type: 'SPA_ACTIVATE', id: 'transfer-money', confirmed: true }));
-  expect(blocked).toMatchObject({ ok: false, blocked: true, message: 'Speak Page Actions does not operate banking or financial pages.' });
+  expect(blocked).toMatchObject({ ok: false, blocked: true, message: 'A finance or sign-in safety signal was found. This page cannot be scanned.' });
   expect(await page.evaluate(() => (window as any).__transferCount)).toBe(0);
 
   const { context, popup, fixture } = await extensionPopup(false, false, 'financial-fixture.html');
   try {
-    await expect(popup.locator('#status')).toHaveText('Speak Page Actions does not operate banking or financial pages.');
+    await expect(popup.locator('#status')).toHaveText('A finance or sign-in safety signal was found. This page cannot be scanned.');
     await expect(popup.locator('#action-list button')).toHaveCount(0);
     await popup.locator('#command').fill('click transfer money');
     await popup.getByRole('button', { name: 'Run command' }).click();
-    await expect(popup.locator('#status')).toHaveText('Speak Page Actions does not operate banking or financial pages.');
+    await expect(popup.locator('#status')).toHaveText('A finance or sign-in safety signal was found. This page cannot be scanned.');
     await expect(fixture.locator('#result')).toHaveText('');
   } finally { await context.close(); }
+
+  await page.setContent('<main><h1>Welcome back</h1><label>Username <input /></label><label>Password <input type="password" /></label><button>Sign in</button></main>');
+  const signInBlocked = await page.evaluate(() => (window as typeof window & { sendSpaMessage: (message: unknown) => Promise<{ actions: unknown[]; blocked?: boolean }> }).sendSpaMessage({ type: 'SPA_COLLECT' }));
+  expect(signInBlocked).toMatchObject({ actions: [], blocked: true });
+
+  await page.setContent('<main><h1>Riverbank field notes</h1><button>Save notes</button></main>');
+  const riverbank = await page.evaluate(() => (window as typeof window & { sendSpaMessage: (message: unknown) => Promise<{ actions: Array<{ label: string }>; blocked?: boolean }> }).sendSpaMessage({ type: 'SPA_COLLECT' }));
+  expect(riverbank).toEqual({ actions: [expect.objectContaining({ label: 'Save notes' })], title: '' });
+
+  await page.route('https://bank.example/**', (route) => route.fulfill({ contentType: 'text/html', body: '<!doctype html><title>Welcome</title><main><button>Continue</button></main>' }));
+  await page.goto('https://bank.example/sign-in');
+  await installAgent(page);
+  const financeHost = await page.evaluate(() => (window as typeof window & { sendSpaMessage: (message: unknown) => Promise<{ actions: unknown[]; blocked?: boolean }> }).sendSpaMessage({ type: 'SPA_COLLECT' }));
+  expect(financeHost).toMatchObject({ actions: [], blocked: true });
+
+  await page.route('https://secure.chase.com/**', (route) => route.fulfill({ contentType: 'text/html', body: '<!doctype html><title>Welcome back</title><main><label>Username <input /></label><label>Password <input type="password" /></label><button>Sign in</button></main>' }));
+  await page.goto('https://secure.chase.com/web/auth/');
+  await installAgent(page);
+  const brandedSignIn = await page.evaluate(() => (window as typeof window & { sendSpaMessage: (message: unknown) => Promise<{ actions: unknown[]; blocked?: boolean }> }).sendSpaMessage({ type: 'SPA_COLLECT' }));
+  expect(brandedSignIn).toMatchObject({ actions: [], blocked: true });
+
+  await page.route('https://secure.chase.com/home/**', (route) => route.fulfill({ contentType: 'text/html', body: '<!doctype html><title>Welcome back</title><main><button>Continue</button></main>' }));
+  await page.goto('https://secure.chase.com/home/');
+  await installAgent(page);
+  const unknownBrandedPage = await page.evaluate(() => (window as typeof window & { sendSpaMessage: (message: unknown) => Promise<{ actions: Array<{ label: string }>; blocked?: boolean }> }).sendSpaMessage({ type: 'SPA_COLLECT' }));
+  expect(unknownBrandedPage).toEqual({ actions: [expect.objectContaining({ label: 'Continue' })], title: 'Welcome back' });
 });
 
 test('@claim:visible-labels lists visible buttons, links, and labelled fields', async ({ page }) => {
@@ -514,7 +540,9 @@ test('@claim:page-data-local records no external page-data requests in a complet
   } finally { await context.close(); }
 });
 
-test('@claim:extension-local-storage keeps license data out of website storage and inside the extension', async ({ page }) => {
+test('@claim:extension-local-storage keeps returned tokens out of browser storage and saves Pro only in extension-local storage', async ({ page }) => {
+  const requests: string[] = [];
+  page.on('request', (request) => requests.push(request.url()));
   await page.goto('/');
   await page.waitForFunction(() => navigator.serviceWorker?.controller !== null);
   await page.goto('/?license=recorded-license');
@@ -537,6 +565,11 @@ test('@claim:extension-local-storage keeps license data out of website storage a
   expect(websiteStorage.cookie).toBe('');
   expect(websiteStorage.databases).toEqual([]);
   expect(websiteStorage.cacheRequests.some((url) => url.includes('recorded-license'))).toBe(false);
+  expect(requests.filter((url) => url.includes('recorded-license'))).toEqual(['http://127.0.0.1:4173/?license=recorded-license']);
+  await page.goto('/#license=fragment-only-license');
+  await expect(page).toHaveURL('http://127.0.0.1:4173/');
+  await expect(page.getByLabel('License token returned by checkout')).toHaveValue('fragment-only-license');
+  expect(requests.some((url) => url.includes('fragment-only-license'))).toBe(false);
   const { context, popup } = await extensionPopup();
   try {
     await context.route('https://api.sociobot.in/api/v1/products/speak-page-actions/verify?license=recorded-license', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ valid: true }) }));

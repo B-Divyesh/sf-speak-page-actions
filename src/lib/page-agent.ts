@@ -18,7 +18,7 @@ export function installPageAgent() {
   const financialContextWords = /\b(?:bank(?:ing)?|credit union|financial(?:\s+services)?|checking|savings|credit card|debit card|bank account|account balance|routing number|account number|investment(?:s)?|brokerage|trading account|loan|mortgage|insurance policy|wallet|cryptocurrency|crypto)\b/i;
   const financialHost = /(?:^|[.-])(?:bank|banking|creditunion|credit-union|financial|finance|finserv|brokerage|invest|trading|payments?|wallet)(?:[.-]|$)/i;
   const financialActionWords = /\b(?:transfer|wire|withdraw(?:al)?|deposit|cash out|send money|move money|pay bill|add payee|beneficiary)\b/i;
-  const financialPageMessage = 'Speak Page Actions does not operate banking or financial pages.';
+  const financialPageMessage = 'A finance or sign-in safety signal was found. This page cannot be scanned.';
   const unavailableActionMessage = 'That action is no longer visible or available. Scan the page again.';
   const changedActionMessage = 'That action changed since the last scan. Scan the page again.';
   const actionIdByElement = new WeakMap<HTMLElement, string>();
@@ -63,13 +63,14 @@ export function installPageAgent() {
   const separatedWords = (label: string) => label
     .replace(/([a-z])([A-Z])/g, '$1 $2')
     .replace(/([A-Z])([A-Z][a-z])/g, '$1 $2');
-  // Banking automation is deliberately outside this product's job. A host
-  // signal catches clear financial domains; page headings and money-moving
-  // controls cover branded domains whose name alone is not descriptive. This
-  // check runs again immediately before activation so a stale action cannot
-  // bypass the policy after a page changes.
+  // Finance and sign-in pages are deliberately outside this product's job. A
+  // familiar finance signal or a visible password field stops scanning. This
+  // is a conservative, testable boundary rather than a claim to identify every
+  // financial page. It runs again immediately before activation so a stale
+  // action cannot bypass the policy after a page changes.
   const isFinancialPage = () => {
-    if (financialHost.test(location.hostname)) return true;
+    if (financialHost.test(location.hostname)
+      || [...document.querySelectorAll<HTMLInputElement>('input[type="password"]')].some(isAvailable)) return true;
     const controls = [...document.querySelectorAll<HTMLElement>(selector)]
       .filter(isAvailable)
       .map(labelFor);
