@@ -64,6 +64,9 @@ and `/?demo=1`.
   critical issues on home and demo. Evidence:
   `test-results/polish-1-live-home-390.png` and
   `test-results/polish-1-live-demo-390.png`.
+- The live downloadable extension ZIP SHA-256 equals the deployed local build:
+  `d78bab29e16b2ff431021054a154044b76f62b5a2595be078517be2eb971cde3`.
+  Live `robots.txt` and `sitemap.xml` return 200; an unknown route returns 404.
 
 ## Known gaps
 
