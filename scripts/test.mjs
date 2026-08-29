@@ -7,4 +7,6 @@ const run = (command, commandArgs) => {
 };
 
 run('npx', ['vitest', 'run', 'tests/actions.test.ts']);
+run('node', ['scripts/check-copy-audit.mjs']);
+run('node', ['scripts/check-claims.mjs']);
 run('npx', ['playwright', 'test', ...args]);

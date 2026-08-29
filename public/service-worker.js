@@ -1,4 +1,4 @@
-const CACHE = 'speak-page-actions-v3';
+const CACHE = 'speak-page-actions-v4';
 const SHELL = ['/', '/demo', '/privacy', '/terms', '/art/hero.webp'];
 async function precache() {
   const cache = await caches.open(CACHE);
@@ -19,8 +19,9 @@ self.addEventListener('fetch', (event) => {
   const isNavigation = event.request.mode === 'navigate';
   const fromNetwork = () => fetch(event.request).then((response) => { const copy = response.clone(); caches.open(CACHE).then((cache) => cache.put(event.request, copy)); return response; });
   // Navigations are network-first so a newly activated worker serves the
-  // current shell; cached shell remains the offline fallback.
+  // current shell. Do not cache navigation URLs: checkout returns include a
+  // license query value, and that value must never enter Cache Storage.
   event.respondWith(isNavigation
-    ? fromNetwork().catch(() => caches.match(event.request).then((cached) => cached || caches.match('/')))
+    ? fetch(event.request).catch(() => caches.match(event.request, { ignoreSearch: true }).then((cached) => cached || caches.match('/')))
     : caches.match(event.request).then((cached) => cached || fromNetwork().catch(() => caches.match('/'))));
 });

@@ -4,7 +4,7 @@ Speak visible browser controls on an ordinary page. It is for people with limite
 
 The extension scans only the current page after you open it. Hold the speak button and say a visible control name, such as “click save address.” Hold Space or Enter to speak; release the key to stop. It asks before controls that may publish, submit, delete, pay, or send. Password fields are never listed.
 
-Try four sample controls at [the demo page](https://speak-page-actions.sociobot.in/demo). Sample changes use separate browser storage and do not change extension settings. Keys start with `demo:spa:` for verification.
+Try four sample controls at [the one-click demo](https://speak-page-actions.sociobot.in/?demo=1). Sample changes use separate browser storage and do not change extension settings. Keys start with `demo:spa:` for verification.
 
 ## Run locally
 
@@ -25,6 +25,10 @@ Install on desktop Chrome or Chromium only. Download and unzip the packaged ZIP,
 ## Privacy and limits
 
 The extension scans only the current page after you open it. It does not capture background microphone audio. Spoken commands work only when your browser can process speech on this device. You can type the same command when speech is unavailable. The public site works offline after its first visit. See [Privacy](https://speak-page-actions.sociobot.in/privacy) and [Terms](https://speak-page-actions.sociobot.in/terms).
+
+## Restore Pro
+
+Open the extension on a normal page. Open **Restore Pro and save command names**. Paste your license token, then choose **Restore Pro**. The website does not store license tokens.
 
 ## License
 

@@ -56,22 +56,20 @@ async function undersizedTargets(page: import('@playwright/test').Page) {
   }));
 }
 
-test('landing has no serious accessibility violations at phone width', async ({ page }) => {
+test('all light site routes have no serious accessibility violations at phone width', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('/');
-  const results = await new AxeBuilder({ page }).analyze();
-  expect(results.violations.filter((item) => ['serious', 'critical'].includes(item.impact || '')).map((item) => item.id)).toEqual([]);
+  for (const path of ['/', '/demo', '/privacy', '/terms', '/404']) {
+    await page.goto(path);
+    const results = await new AxeBuilder({ page }).analyze();
+    expect(results.violations.filter((item) => ['serious', 'critical'].includes(item.impact || '')).map((item) => item.id), path).toEqual([]);
+  }
 });
 
 test('all site controls are at least 44 by 44 CSS pixels at phone width', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   for (const path of ['/', '/demo', '/privacy', '/terms', '/404']) {
-    await page.goto(path);
-    if (path === '/') {
-      await expect(page.getByLabel('License token')).toBeHidden();
-      await page.getByRole('button', { name: 'Restore a license' }).click();
-      await expect(page.getByLabel('License token')).toBeVisible();
-    }
+    await page.goto(path === '/' ? '/?license=touch-target-token' : path);
+    if (path === '/') await expect(page.getByLabel('License token returned by checkout')).toBeVisible();
     expect(await undersizedTargets(page), path).toEqual([]);
   }
 });
@@ -87,7 +85,7 @@ test('packaged extension controls are at least 44 by 44 CSS pixels', async ({ pa
     .join('\n');
   await page.setContent(html);
   await page.addStyleTag({ content: popupCss });
-  await page.getByText('Save your own command names (Pro)').click();
+  await page.getByText('Restore Pro and save command names').click();
   expect(await undersizedTargets(page)).toEqual([]);
 });
 
@@ -121,13 +119,16 @@ test('@claim:sample-action opens four sample controls in one click', async ({ pa
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
   await page.getByRole('link', { name: 'Try it with sample data' }).click();
+  await expect(page).toHaveURL(/\?demo=1$/);
   await expect(page.getByText('Demo — sample data, nothing is saved')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Speak a visible control' })).toBeVisible();
   await expect(page.getByRole('button', { name: /Save address/ })).toBeVisible();
   await expect(page.locator('#demo-actions button')).toHaveCount(4);
   await expect(page.locator('#demo-status')).toContainText('Found four visible controls');
-  const initialViewport = await page.locator('#demo-actions').evaluate((element) => element.getBoundingClientRect().top < window.innerHeight);
+  const initialViewport = await page.locator('#demo-actions button').last().evaluate((element) => element.getBoundingClientRect().bottom <= window.innerHeight);
+  const seededResult = await page.locator('.demo-console > div p').evaluate((element) => element.getBoundingClientRect().bottom <= window.innerHeight);
   expect(initialViewport).toBe(true);
+  expect(seededResult).toBe(true);
 });
 
 test('@claim:demo-local keeps demo use local to this site', async ({ page }) => {
@@ -206,6 +207,14 @@ test('@claim:destructive-review requires review before submit, delete, publish, 
   const implicit = result.actions.find((action) => action.label === 'Save changes')!;
   await page.evaluate((id) => (window as any).sendSpaMessage({ type: 'SPA_ACTIVATE', id, confirmed: true }), implicit.id);
   expect(await page.evaluate(() => (window as any).__submits)).toBe(1);
+  const { context, popup, fixture } = await extensionPopup();
+  try {
+    await popup.getByRole('button', { name: /Publish changes/ }).click();
+    await expect(popup.getByRole('dialog')).toBeVisible();
+    await expect(fixture.locator('#result')).toBeEmpty();
+    await popup.getByRole('button', { name: 'Use action' }).click();
+    await expect(fixture.locator('#result')).toHaveText('Published changes.');
+  } finally { await context.close(); }
 });
 
 test('@claim:visible-labels lists visible buttons, links, and labelled fields', async ({ page }) => {
@@ -229,7 +238,8 @@ test('@claim:push-to-talk starts and stops for pointer, Space, and Enter holds',
     await talk.dispatchEvent('pointerdown'); await expect(talk).toHaveAttribute('aria-pressed', 'true'); await talk.dispatchEvent('pointerup');
     await talk.focus(); await popup.keyboard.down(' '); await expect(talk).toHaveAttribute('aria-pressed', 'true'); await popup.keyboard.up(' ');
     await popup.keyboard.down('Enter'); await expect(talk).toHaveAttribute('aria-pressed', 'true'); await popup.keyboard.up('Enter');
-    expect(await popup.evaluate(() => [(window as any).__speechStarts, (window as any).__speechStops])).toEqual([3, 3]);
+    await talk.dispatchEvent('pointerdown'); await expect(talk).toHaveAttribute('aria-pressed', 'true'); await talk.dispatchEvent('pointercancel');
+    expect(await popup.evaluate(() => [(window as any).__speechStarts, (window as any).__speechStops])).toEqual([4, 4]);
     await expect(talk).toHaveAttribute('aria-pressed', 'false');
   } finally { await context.close(); }
 });
@@ -239,8 +249,13 @@ test('@claim:pro-aliases saves and uses a command name through the packaged exte
   await expect(page.getByRole('list', { name: 'Product facts' })).toContainText('saved command names cost $12 once');
   await expect(page.getByRole('link', { name: 'Buy Pro in hosted checkout — $12 once' })).toHaveAttribute('href', 'https://api.sociobot.in/api/v1/products/speak-page-actions/checkout');
   await expect(page.getByText('Opens Dodo’s checkout in this tab.')).toBeVisible();
-  await page.getByRole('button', { name: 'Restore a license' }).click();
-  await expect(page.getByLabel('License token')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Open the extension to restore Pro' })).toBeVisible();
+  await page.goto('/?license=recorded-valid-license');
+  await expect(page).toHaveURL('http://127.0.0.1:4173/');
+  await expect(page.locator('#license-handoff')).toBeFocused();
+  const returnedToken = await page.getByLabel('License token returned by checkout').inputValue();
+  expect(returnedToken).toBe('recorded-valid-license');
+  expect(await page.evaluate(() => Object.fromEntries(Object.entries(localStorage)))).toEqual({});
   const checkout = await request.get('https://api.sociobot.in/api/v1/products/speak-page-actions/checkout');
   expect(checkout.status()).toBe(200);
   expect(new URL(checkout.url()).hostname).toBe('checkout.dodopayments.com');
@@ -253,10 +268,12 @@ test('@claim:pro-aliases saves and uses a command name through the packaged exte
     await context.route('https://api.sociobot.in/api/v1/products/speak-page-actions/verify?license=recorded-valid-license', async (route) => {
       await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ valid: true, reason: 'ok' }) });
     });
-    await popup.getByText('Save your own command names (Pro)').click();
+    await popup.getByText('Restore Pro and save command names').click();
+    await popup.getByLabel('Pro license token').fill(returnedToken);
+    await popup.getByRole('button', { name: 'Restore Pro' }).click();
+    await expect(popup.locator('#license-status')).toHaveText('Pro is active in this extension.');
     await popup.getByLabel('Your command name').fill('checkout');
     await popup.getByLabel('Visible control').selectOption({ label: 'Review order' });
-    await popup.getByLabel('Pro license token').fill('recorded-valid-license');
     await popup.getByRole('button', { name: 'Save command name' }).click();
     await expect(popup.locator('#alias-status')).toHaveText('Saved “checkout” for Review order.');
     const saved = await popup.evaluate(() => chrome.storage.local.get(['spa:aliases', 'sb_license:speak-page-actions']));
@@ -306,14 +323,38 @@ test('@claim:page-data-local records no external page-data requests in a complet
   } finally { await context.close(); }
 });
 
-test('@claim:extension-local-storage saves extension data locally through the popup', async () => {
+test('@claim:extension-local-storage keeps license data out of website storage and inside the extension', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForFunction(() => navigator.serviceWorker?.controller !== null);
+  await page.goto('/?license=recorded-license');
+  await expect(page).toHaveURL('http://127.0.0.1:4173/');
+  const returned = page.getByLabel('License token returned by checkout');
+  await expect(returned).toHaveValue('recorded-license');
+  await expect(page.locator('#license-handoff')).toBeFocused();
+  const websiteStorage = await page.evaluate(async () => {
+    const cacheRequests = (await Promise.all((await caches.keys()).map(async (name) => (await (await caches.open(name)).keys()).map((request) => request.url)))).flat();
+    return {
+      local: Object.fromEntries(Object.entries(localStorage)),
+      session: Object.fromEntries(Object.entries(sessionStorage)),
+      cookie: document.cookie,
+      databases: typeof indexedDB.databases === 'function' ? (await indexedDB.databases()).map((database) => database.name) : [],
+      cacheRequests,
+    };
+  });
+  expect(websiteStorage.local).toEqual({});
+  expect(websiteStorage.session).toEqual({});
+  expect(websiteStorage.cookie).toBe('');
+  expect(websiteStorage.databases).toEqual([]);
+  expect(websiteStorage.cacheRequests.some((url) => url.includes('recorded-license'))).toBe(false);
   const { context, popup } = await extensionPopup();
   try {
     await context.route('https://api.sociobot.in/api/v1/products/speak-page-actions/verify?license=recorded-license', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ valid: true }) }));
-    await popup.getByText('Save your own command names (Pro)').click();
+    await popup.getByText('Restore Pro and save command names').click();
+    await popup.getByLabel('Pro license token').fill('recorded-license');
+    await popup.getByRole('button', { name: 'Restore Pro' }).click();
+    await expect(popup.locator('#license-status')).toHaveText('Pro is active in this extension.');
     await popup.getByLabel('Your command name').fill('order');
     await popup.getByLabel('Visible control').selectOption({ label: 'Review order' });
-    await popup.getByLabel('Pro license token').fill('recorded-license');
     await popup.getByRole('button', { name: 'Save command name' }).click();
     await expect(popup.locator('#alias-status')).toHaveText('Saved “order” for Review order.');
     expect(await popup.evaluate(() => chrome.storage.local.get(null))).toMatchObject({ 'spa:aliases': { order: 'Review order' }, 'sb_license:speak-page-actions': 'recorded-license' });
@@ -328,13 +369,29 @@ test('@claim:license-verification sends an encoded restore token only to Sociobo
   try {
     const token = 'recorded valid/license';
     await context.route('https://api.sociobot.in/api/v1/products/speak-page-actions/verify?license=recorded%20valid%2Flicense', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ valid: true }) }));
-    await popup.getByText('Save your own command names (Pro)').click();
-    await popup.getByLabel('Your command name').fill('review');
-    await popup.getByLabel('Visible control').selectOption({ label: 'Review order' });
+    await popup.getByText('Restore Pro and save command names').click();
     await popup.getByLabel('Pro license token').fill(token);
-    await popup.getByRole('button', { name: 'Save command name' }).click();
-    await expect(popup.locator('#alias-status')).toHaveText('Saved “review” for Review order.');
+    await popup.getByRole('button', { name: 'Restore Pro' }).click();
+    await expect(popup.locator('#license-status')).toHaveText('Pro is active in this extension.');
     expect(requests).toEqual(['https://api.sociobot.in/api/v1/products/speak-page-actions/verify?license=recorded%20valid%2Flicense']);
+  } finally { await context.close(); }
+});
+
+test('license restore errors explain the next step and never save an invalid token', async () => {
+  const { context, popup } = await extensionPopup();
+  try {
+    await popup.getByText('Restore Pro and save command names').click();
+    await popup.getByRole('button', { name: 'Restore Pro' }).click();
+    await expect(popup.locator('#license-status')).toHaveText('Paste your Pro license token.');
+    await context.route('https://api.sociobot.in/api/v1/products/speak-page-actions/verify?license=invalid-license', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ valid: false, reason: 'invalid' }) }));
+    await popup.getByLabel('Pro license token').fill('invalid-license');
+    await popup.getByRole('button', { name: 'Restore Pro' }).click();
+    await expect(popup.locator('#license-status')).toHaveText('This license is not active. Check the token or buy Pro on the product site.');
+    expect(await popup.evaluate(() => chrome.storage.local.get('sb_license:speak-page-actions'))).toEqual({});
+    await context.route('https://api.sociobot.in/api/v1/products/speak-page-actions/verify?license=offline-license', (route) => route.abort());
+    await popup.getByLabel('Pro license token').fill('offline-license');
+    await popup.getByRole('button', { name: 'Restore Pro' }).click();
+    await expect(popup.locator('#license-status')).toHaveText('The license could not be checked. Connect to the internet and try again.');
   } finally { await context.close(); }
 });
 
@@ -387,9 +444,12 @@ test('landing first screen presents exactly three privacy, offline, and price fa
   expect((heroResult?.y || 999) + (heroResult?.height || 0)).toBeLessThanOrEqual(844);
 });
 
-test('desktop installation steps are explicit and honest on a phone viewport', async ({ page }) => {
+test('@claim:desktop-chromium-only packages a working Chromium extension and directs mobile visitors to the demo', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
+  const manifest = JSON.parse(readFileSync('dist/extension/manifest.json', 'utf8'));
+  expect(manifest.manifest_version).toBe(3);
+  expect(manifest.action.default_title).toContain('Speak Page Actions');
   await expect(page.getByText('Mobile browsers can run the demo but cannot install this extension.')).toBeVisible();
   await page.locator('#install').scrollIntoViewIfNeeded();
   await expect(page.getByRole('heading', { name: 'Install on desktop Chrome or Chromium' })).toBeVisible();
@@ -397,6 +457,11 @@ test('desktop installation steps are explicit and honest on a phone viewport', a
   await expect(page.locator('#install')).toContainText('Developer mode');
   await expect(page.locator('#install')).toContainText('Load unpacked');
   await expect(page.getByRole('link', { name: 'Download the desktop extension ZIP' })).toHaveAttribute('download', '');
+  const { context, popup } = await extensionPopup();
+  try {
+    await expect(popup).toHaveTitle('Speak Page Actions — Use visible controls by voice');
+    await expect(popup.getByRole('heading', { level: 1, name: 'Say a visible action' })).toBeVisible();
+  } finally { await context.close(); }
 });
 
 test('browser Back and Forward restore route focus and scroll position', async ({ page }) => {
@@ -439,4 +504,27 @@ test('client routes set matching title, canonical, Open Graph, and Twitter metad
     expect(await page.locator('meta[name="twitter:title"]').getAttribute('content')).toBe(title);
     expect(await page.locator('meta[name="twitter:description"]').getAttribute('content')).toBe(description);
   }
+});
+
+test('valid routes have no console errors, mobile overflow, dead internal links, or active reduced motion', async ({ page, request }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(String(error)));
+  page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
+  const internal = new Set<string>();
+  for (const path of ['/', '/demo', '/privacy', '/terms']) {
+    const response = await page.goto(path);
+    expect(response?.status(), path).toBe(200);
+    expect(await page.locator('h1').count(), path).toBe(1);
+    expect(await page.locator('main').count(), path).toBe(1);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), path).toBe(true);
+    expect(await page.evaluate(() => getComputedStyle(document.documentElement).scrollBehavior), path).toBe('auto');
+    expect(await page.evaluate(() => document.getAnimations().filter((animation) => animation.playState === 'running').length), path).toBe(0);
+    for (const href of await page.locator('a[href]').evaluateAll((links) => links.map((link) => (link as HTMLAnchorElement).href))) {
+      if (new URL(href).origin === 'http://127.0.0.1:4173') internal.add(href);
+    }
+  }
+  for (const href of internal) expect((await request.get(href)).status(), href).toBe(200);
+  expect(errors).toEqual([]);
 });

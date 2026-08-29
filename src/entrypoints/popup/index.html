@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#f7f0df" />
-    <title>Speak Page Actions</title>
+    <title>Speak Page Actions — Use visible controls by voice</title>
   </head>
   <body>
     <main id="app" aria-describedby="status">
@@ -25,7 +25,7 @@
         <ul id="action-list"></ul>
       </section>
       <button id="undo" class="undo" type="button" hidden>Undo last page action</button>
-      <details class="pro"><summary>Save your own command names (Pro)</summary><p>Save a short name for a visible control. The name stays in this browser.</p><label for="alias-name">Your command name</label><input id="alias-name" autocomplete="off" placeholder="checkout" /><label for="alias-target">Visible control</label><select id="alias-target"></select><label for="license-token">Pro license token</label><input id="license-token" autocomplete="off" /><button id="save-alias" type="button">Save command name</button><p id="alias-status" role="status" aria-live="polite"></p></details>
+      <details class="pro"><summary>Restore Pro and save command names</summary><p>Paste your license token to restore Pro in this extension.</p><label for="license-token">Pro license token</label><input id="license-token" autocomplete="off" /><button id="restore-license" type="button">Restore Pro</button><p id="license-status" role="status" aria-live="polite"></p><div class="alias-fields"><p>Save a short name for a visible control. The name stays in this browser.</p><label for="alias-name">Your command name</label><input id="alias-name" autocomplete="off" placeholder="checkout" /><label for="alias-target">Visible control</label><select id="alias-target"></select><button id="save-alias" type="button">Save command name</button><p id="alias-status" role="status" aria-live="polite"></p></div></details>
       <dialog id="review" aria-labelledby="review-title">
         <p class="eyebrow">Review before action</p>
         <h2 id="review-title">Use this action?</h2>

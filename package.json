@@ -11,6 +11,8 @@
     "build": "npm run build:site",
     "test": "node scripts/test.mjs",
     "test:unit": "vitest run tests/actions.test.ts",
+    "test:copy": "node scripts/check-copy-audit.mjs",
+    "test:registry": "node scripts/check-claims.mjs",
     "test:claims": "playwright test",
     "typecheck": "npx tsc --noEmit",
     "lint": "npm run typecheck",
