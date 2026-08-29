@@ -570,6 +570,10 @@ test('@claim:extension-local-storage keeps returned tokens out of browser storag
   await expect(page).toHaveURL('http://127.0.0.1:4173/');
   await expect(page.getByLabel('License token returned by checkout')).toHaveValue('fragment-only-license');
   expect(requests.some((url) => url.includes('fragment-only-license'))).toBe(false);
+  await page.evaluate(() => { location.hash = 'license=same-page-fragment-token'; });
+  await expect(page).toHaveURL('http://127.0.0.1:4173/');
+  await expect(page.getByLabel('License token returned by checkout')).toHaveValue('same-page-fragment-token');
+  expect(requests.some((url) => url.includes('same-page-fragment-token'))).toBe(false);
   const { context, popup } = await extensionPopup();
   try {
     await context.route('https://api.sociobot.in/api/v1/products/speak-page-actions/verify?license=recorded-license', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ valid: true }) }));
